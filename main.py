@@ -11,7 +11,7 @@ from mazemdp.maze_plotter import show_videos
 from random import seed
 from mazemdp import create_random_maze
 from dynaq import DynaQAgent
-from utils import plot_need
+
 # For visualization
 os.environ["VIDEO_FPS"] = "5"
 
