@@ -1,27 +1,13 @@
 # Implementation of the work of Mattar's [Prioritized memory access explains planning and hippocampal replay](https://www.nature.com/articles/s41593-018-0232-z) (Work in Progress)
-
-## Install
+## This repo makes use of osigaud and araffin's [simple maze MDP simulator](https://github.com/osigaud/SimpleMazeMDP)
+## Install requirements
 
 - install a simple maze mdp simulator in your working environment (all credit to osigaud and araffin): 
 
 ```
-git clone https://github.com/osigaud/SimpleMazeMDP.git
-cd SimpleMazeMDP
-python3 setup.py install
-cd
+pip3 install requirements.txt
 ```
 
-- clone this repo wherever you want in your working enivornment:
-
-```
-git clone https://github.com/KohlerHECTOR/Prioritized_experience_replay.git
-```
-
-- go to the project to start experimenting:
-
-```
-cd Prioritized_experience_replay
-```
 
 ## Reproduce [Sutton & Barto's Introduction to RL figure 8.5 (2nd edition 2014, 2015)](https://web.stanford.edu/class/psych209/Readings/SuttonBartoIPRLBook2ndEd.pdf) (roughly 5 minutes run time)
 
