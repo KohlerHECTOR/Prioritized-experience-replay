@@ -1,5 +1,5 @@
 # Implementation of the work of Mattar's [Prioritized memory access explains planning and hippocampal replay](https://www.nature.com/articles/s41593-018-0232-z) (Work in Progress)
-## This repo makes use of osigaud and araffin's [simple maze MDP simulator](https://github.com/osigaud/SimpleMazeMDP)
+## This repo makes use of @osigaud and @araffin 's [simple maze MDP simulator](https://github.com/osigaud/SimpleMazeMDP)
 ## Install requirements
 
 - install requirements:
