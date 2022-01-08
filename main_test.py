@@ -60,6 +60,9 @@ def to_plot(data, label):
 
 to_plot(np.array(res_train), "train")
 to_plot(np.array(res_eval), "eval")
+plt.xlabel("episode")
+plt.ylabel("steps until goal")
+plt.title("Performances of Mattar's agent in training and evalutation")
 plt.legend()
 filename = ""
 for _, val in args._get_kwargs():
