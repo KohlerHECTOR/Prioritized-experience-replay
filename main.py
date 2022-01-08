@@ -68,7 +68,7 @@ plt.plot(to_plot_planning_5[:], label = "5 planning steps")
 plt.plot(to_plot_planning_50[:], label = "50 planning steps")
 plt.xlabel("steps per epsiode")
 plt.legend()
-plt.savefig("results/figure_8_5.pdf")
+plt.savefig("results/Sutton&Barto/figure_8_5.png")
 plt.clf()
 # rat.mdp.current_state = 0
 # rat.mdp.render(rat.Q, np.argmax(rat.Q, axis=1), title="Dyna-Q softmax")

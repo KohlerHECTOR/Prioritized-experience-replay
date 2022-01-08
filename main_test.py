@@ -15,7 +15,8 @@ from replay_sim import Agent
 
 import argparse
 
-
+# For visualization
+os.environ["VIDEO_FPS"] = "5"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pre_explore", type = bool, default = True)
@@ -67,4 +68,4 @@ plt.legend()
 filename = ""
 for _, val in args._get_kwargs():
     filename += "_" + str(val)
-plt.savefig("results/plots/" + filename + ".png")
+plt.savefig("results/Mattar/" + filename + ".png")
