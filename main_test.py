@@ -1,13 +1,9 @@
 import os
-from typing import Tuple, List
 
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm.notebook import tqdm
 
-from mazemdp.toolbox import egreedy, egreedy_loc, softmax
 from mazemdp.maze import build_maze, create_random_maze
-from mazemdp.maze_plotter import show_videos
 from random import seed
 from mazemdp import create_random_maze
 from replay_sim import Agent
