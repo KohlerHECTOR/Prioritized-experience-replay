@@ -2,7 +2,7 @@
 ## This repo makes use of osigaud and araffin's [simple maze MDP simulator](https://github.com/osigaud/SimpleMazeMDP)
 ## Install requirements
 
-- install a simple maze mdp simulator in your working environment (all credit to osigaud and araffin): 
+- install requirements:
 
 ```
 pip3 install -r requirements.txt
