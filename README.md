@@ -2,8 +2,6 @@
 ## This repo makes use of [osigaud](https://github.com/osigaud) and [araffin](https://github.com/araffin) 's [simple maze MDP simulator](https://github.com/osigaud/SimpleMazeMDP)
 ## Install requirements
 
-- install requirements:
-
 ```
 pip3 install -r requirements.txt
 ```
