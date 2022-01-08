@@ -5,7 +5,7 @@
 - install a simple maze mdp simulator in your working environment (all credit to osigaud and araffin): 
 
 ```
-pip3 install requirements.txt
+pip3 install -r requirements.txt
 ```
 
 
