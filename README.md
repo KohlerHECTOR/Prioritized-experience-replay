@@ -17,7 +17,7 @@ The figure is saved in results/Sutton&Barto/
 ## Run Mattar's default model (dyna Q coupled with smart backup procedure) (roughly 5 minutes run time)
 
 ```
-python3 main_test.py --simulations 2 --episodes 50
+python3 main.py --simulations 10 --episodes 30
 ```
 
-A figure of performances of the agent is saved in results/Mattar/
+A figure of performances of the agent is saved in results/
