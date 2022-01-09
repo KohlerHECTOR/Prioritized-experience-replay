@@ -48,7 +48,7 @@ for i in range(args.simulations):
     rat = Agent(mdp, args)
     data = rat.learn(args)
     res_train.append(data["train"])
-    res_eval.append(data["eval"])
+    # res_eval.append(data["eval"])
 
 
 def to_plot(data, label):
@@ -59,7 +59,7 @@ def to_plot(data, label):
 
 
 to_plot(np.array(res_train), "train")
-to_plot(np.array(res_eval), "eval")
+# to_plot(np.array(res_eval), "eval")
 plt.xlabel("episode")
 plt.ylabel("steps until goal")
 plt.title("Performances of Mattar's agent in training and evalutation")
