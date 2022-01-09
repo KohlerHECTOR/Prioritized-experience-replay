@@ -1,6 +1,6 @@
 import numpy as np
 from utils import normalize_mat
-from mazemdp.toolbox import softmax
+from mazemdp.toolbox import softmax, egreedy
 from mazemdp.mdp import Mdp
 from scipy.linalg import eig
 import sys
@@ -19,28 +19,6 @@ class Agent():
         self.nb_episodes = 0 # keep track of nb times we reached end of maze
 
 # TODO: code to store sim data using a sim_data class
-
-
-    def evaluate(self, params):
-        """
-        simple function to evaluate a policy from a Q table
-        """
-        ## BEGIN EPISODE ##
-        s, done = self.start(params)
-
-        steps_to_exit = 0
-        while not done:
-            # Draw an action using a softmax policy
-            if params.greedy_eval:
-                a = np.argmax(self.Q[s,:])
-            else:
-                prob_a = softmax(self.Q, s, params.tau)
-                a = np.random.choice(np.arange(self.mdp.action_space.size), p = prob_a)
-            s, r, done, _  = self.mdp.step(a)
-            # s, r, done, _  = self.mdp.step(np.argmax(self.Q[s,:]))
-            steps_to_exit += 1
-
-        return steps_to_exit
 
     def pre_explore(self):
         # To get initial Model
@@ -88,7 +66,18 @@ class Agent():
                 Q_mean = self.Q[s_e].copy()
                 Q_pre = Q_mean.copy()
                 # Policy before
-                prob_a_pre = np.exp((Q_mean / params.tau)).round(5) / np.sum(np.exp((Q_mean / params.tau)).round(5))
+
+                if params.plan_policy == "softmax":
+                    prob_a_pre = np.exp((Q_mean / params.tau)).round(5) / np.sum(np.exp((Q_mean / params.tau)).round(5))
+
+                elif params.plan_policy == "greedy":
+                    r = np.random
+                    if r.random() < params.epsilon:
+                        prob_a_pre = np.ones(self.mdp.action_space.size) / self.mdp.action_space.size
+                    else:
+                        # choose randomly about the actions with a max value
+                        prob_a_pre = np.zeros(self.mdp.action_space.size)
+                        prob_a_pre[np.random.choice(np.where(Q_mean == Q_mean.max())[0])] = 1
 
                 if int(exps[-1,-1]) <  self.mdp.nb_states:
                     s_next_val = np.max(self.Q[int(exps[-1, -1])]) # value of s_next of the last experience in the seq
@@ -101,7 +90,17 @@ class Agent():
                 Q_mean[a_e] += params.alpha * (Q_target - Q_mean[a_e])
 
                 # Policy after backup
-                prob_a_post = np.exp((Q_mean / params.tau)).round(5) / np.sum(np.exp((Q_mean / params.tau)).round(5))
+                if params.plan_policy == "softmax":
+                    prob_a_post = np.exp((Q_mean / params.tau)).round(5) / np.sum(np.exp((Q_mean / params.tau)).round(5))
+
+                elif params.plan_policy == "greedy":
+                    r = np.random
+                    if r.random() < params.epsilon:
+                        prob_a_post = np.ones(self.mdp.action_space.size) / self.mdp.action_space.size
+                    else:
+                        # choose randomly about the actions with a max value
+                        prob_a_post = np.zeros(self.mdp.action_space.size)
+                        prob_a_post[np.random.choice(np.where(Q_mean == Q_mean.max())[0])] = 1
 
                 # Calculate Gain
                 EV_pre = np.sum(prob_a_pre * Q_mean)
@@ -152,8 +151,8 @@ class Agent():
 
         return int(max_EVM_idx)
 
-    def expand(self, plan_exp, planning_backups):
-        
+    def expand(self, params, plan_exp, planning_backups):
+
         seq_start = np.where(np.array(planning_backups)[:,-1] == 1)[0][-1]
         seq_so_far = np.array(planning_backups)[seq_start: , : 4]
         s_n = seq_so_far[-1, -1]
@@ -189,18 +188,23 @@ class Agent():
 
             #Expand previous backup with one extra action
             if params.expand_further and len(planning_backups) > 0:
-                plan_exp = self.expand(plan_exp , planning_backups)
+                plan_exp = self.expand(params, plan_exp , planning_backups)
 
             Gain, sa_Gain = self.gain_term(plan_exp, params)
             need, SR_or_SD = self.need_term(params ,plan_exp, s)
 
-            mask = 1
+            mask_need = 1
             if params.set_all_need_to_1:
-                mask = 0
+                mask_need = 0
+
+            mask_gain = 1
+            if params.set_all_gain_to_1:
+                mask_gain = 0
+
 
             EVM = [] # Expected value of memories
             for i, exps in enumerate(plan_exp):
-                EVM.append(np.sum((need[i][-1] ** mask) * np.maximum(Gain[i], params.baseline_gain))) # Use the need from the last (appended) state
+                EVM.append(np.sum((need[i][-1] ** mask_need) * (np.maximum(Gain[i], params.baseline_gain))) ** mask_gain) # Use the need from the last (appended) state
 
             opport_cost = np.array(self.list_exp)[:,2].mean() # Average expected reward from a random act
             EVM_thresh = min(opport_cost, params.EVM_thresh) # if EVMthresh==Inf, threshold is opportCost
@@ -208,7 +212,6 @@ class Agent():
             if np.max(EVM) > EVM_thresh:
                 # Identify state-action pairs with highest priority
                 max_EVM_idx = self.get_max_EVM_idx(EVM, plan_exp)
-                print(max_EVM_idx)
                 # N-step backup with most useful traj
                 for n, exp in enumerate(plan_exp[max_EVM_idx]):
                     s_plan = int(exp[0])
@@ -254,20 +257,20 @@ class Agent():
         return s_next
 
     def start(self, params):
-        s = self.mdp.reset()
+        s = self.mdp.reset(uniform = True)
         done = self.mdp.done()
-
         if not params.start_random:
             self.mdp.current_state = 0 # start state
             s = self.mdp.current_state
-
         return s, done
 
     def select_action(self, s, params):
         # action selection
-        prob_a = softmax(self.Q, s, params.tau)
-        a = np.random.choice(np.arange(self.mdp.action_space.size), p = prob_a)
-
+        if params.action_policy == "softmax":
+            prob_a = softmax(self.Q, s, params.tau)
+            a = np.random.choice(np.arange(self.mdp.action_space.size), p = prob_a)
+        elif params.action_policy =="greedy":
+            a = egreedy(self.Q, s, params.epsilon)
         return a
 
     def update_transi(self, s, s_next, params):
@@ -292,9 +295,8 @@ class Agent():
         self.eTr *= self.mdp.gamma * params.lambda_ # Decay eligibility trace
 
     def learn(self, params):
-
+        list_Q = []
         steps_to_exit_or_timeout = []
-        steps_to_exit_or_timeout_eval = []
         self.mdp.timeout = params.max_episode_steps
 
         if params.pre_explore:
@@ -302,24 +304,23 @@ class Agent():
             self.T = normalize_mat(self.T)
             self.T = np.nan_to_num(self.T)
 
-        # if params.transi_goal_to_start:
-        #     for term_state in self.mdp.terminal_states:
-        #         if not params.start_random:
-        #             self.T[term_state, :] = 0 # transition from goal to anywhere but start is not allowed
-        #             self.T[term_state, 0] = 1 # transition from goal to start
-        #
-        #         else:
-        #             self.T[term_state, :] = 1/self.mdp.nb_states # transition from goal to any state is uniform
+        if params.transi_goal_to_start:
+            for term_state in self.mdp.terminal_states:
+                if not params.start_random:
+                    self.T[term_state, :] = 0 # transition from goal to anywhere but start is not allowed
+                    self.T[term_state, 0] = 1 # transition from goal to start
+
+                else:
+                    self.T[term_state, :] = 1/self.mdp.nb_states # transition from goal to any state is uniform
 
         tot_reward = 0
-        for ep in range(params.episodes):
 
-            ## BEGIN EPISODE ##
-
-            s, done = self.start(params)
-            steps_to_done = 0
-            ep_reward = 0
-            starting = True
+        ep = 0
+        steps_to_done = 0
+        ep_reward = 0
+        starting = True
+        s, done = self.start(params)
+        while ep < params.episodes:
 
             while not done:
 
@@ -353,19 +354,40 @@ class Agent():
 
 
                 # move
-                s = s_next
+                if s not in self.mdp.terminal_states:
+                    s = s_next
                 starting = False
                 steps_to_done +=1
 
             # END EPISODE #
+            #get next start location
+            s_next, done = self.start(params)
+            # print(s_next)
+            if params.transi_goal_to_start:
+                target_vector = np.zeros(self.mdp.nb_states)
+                target_vector[s_next] = 1 # Update transition matrix
+                self.T[s, : ] += params.T_learning_rate  * (target_vector - self.T[s, :]) # Shift corresponding row of T towards targVec
+                self.list_exp.append([s, np.nan, np.nan, s_next])
+
             self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size))
-            # print(steps_to_done)
             tot_reward += ep_reward
-            # print(steps_to_done)
+            list_Q.append(self.Q)
             steps_to_exit_or_timeout.append(steps_to_done)
-            # steps_to_exit_or_timeout_eval.append(self.evaluate(params))
+
             print("#### EPISODE {} ####".format(ep))
             print("TRAIN: {}".format(steps_to_done))
-            # print("EVAL: {}".format(steps_to_exit_or_timeout_eval[-1]))
+            # bug dans  Simple Maze MDP
+            if steps_to_done == 1 and params.start_random == False:
+                print("bug dans simple maze mdp, last episode not counted")
+                ep-=1
+                steps_to_exit_or_timeout.pop()
+                list_Q.pop()
 
-        return {"train" : steps_to_exit_or_timeout}# , "eval" : steps_to_exit_or_timeout_eval}
+            ep += 1
+            steps_to_done = 0
+            ep_reward = 0
+            starting = True
+            # move agent to start location
+            s = s_next
+
+        return {"train" : steps_to_exit_or_timeout , "list_Q" : list_Q}
