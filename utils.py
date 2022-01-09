@@ -31,7 +31,6 @@ def evaluate(list_q , mdp, params):
             s, r, done, _  = mdp.step(a)
             # s, r, done, _  = self.mdp.step(np.argmax(self.Q[s,:]))
             steps_to_exit += 1
-            
         all_steps_to_exit.append(steps_to_exit)
 
     return all_steps_to_exit

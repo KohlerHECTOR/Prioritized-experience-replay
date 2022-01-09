@@ -80,12 +80,12 @@ class DynaQAgent():
         r, s_next = self.Model[(s, a)]
         # q_old = self.Q.copy()  #q_old and q_new are fore the gain computation
 
-        if s in self.mdp.terminal_states:
-            self.Q[s, a] = self.alpha * r
-
-        else:
-            # Backup
-            self.backup(s, a, r, s_next)
+        # if s in self.mdp.terminal_states:
+        #     self.Q[s, a] = self.alpha * r
+        #
+        # else:
+        #     # Backup
+        self.backup(s, a, r, s_next)
 
     def learn(self,
               eps: float, # epsilon parameter for eps-greedy pol
@@ -130,12 +130,12 @@ class DynaQAgent():
                 s_next, r, done, _ = self.mdp.step(a)
                 # q_old = self.Q.copy() # q_old and q_new are fore the gain computation
 
-                if s in self.mdp.terminal_states:
-                    self.Q[s, a] = self.alpha * r
-
-                else:
-                    # Backup
-                    self.backup(s, a, r, s_next)
+                # if s in self.mdp.terminal_states:
+                #     self.Q[s, a] = self.alpha * r
+                #
+                # else:
+                #     # Backup
+                self.backup(s, a, r, s_next)
 
 
 

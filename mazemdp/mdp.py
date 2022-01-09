@@ -101,7 +101,10 @@ class Mdp:  # defines a Markov Decision Process
 
         self.current_state = state
         done = self.done()  # checks if the episode is over
-
+        # had to cahnge this
+        if state in self.terminal_states:
+            reward = 1
+            done = True
         return [state, reward, done, info]
 
     def new_render(self, title):  # initializes a new environment rendering (a plot defined by a figure, an axis...)

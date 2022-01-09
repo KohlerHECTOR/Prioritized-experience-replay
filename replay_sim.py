@@ -14,8 +14,8 @@ class Agent():
         self.T = np.zeros((self.mdp.nb_states, self.mdp.nb_states)) # state-state transition proba
         self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size)) # eligibility matrix
         self.list_exp = [] # list to store individual experiences (s, a, r, s')
-        self.exp_last_s_next = np.empty((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next states
-        self.exp_last_reward = np.empty((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
+        self.exp_last_s_next = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next states
+        self.exp_last_reward = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
         self.nb_episodes = 0 # keep track of nb times we reached end of maze
 
 # TODO: code to store sim data using a sim_data class
@@ -24,13 +24,13 @@ class Agent():
         # To get initial Model
         self.mdp.reset()
         for s in range(self.mdp.nb_states):
-            for a in range(self.mdp.action_space.size):
-                self.mdp.current_state = s # to force the execution of every action in each state
-                s_next, _, _, _ = self.mdp.step(a)
-                self.list_exp.append([s, a, 0, s_next]) # update list of experiences
-                self.exp_last_s_next[s, a] = s_next # update next_state model
-                self.exp_last_reward[s, a] = 0 # update reward model
-                if s not in self.mdp.terminal_states:
+            if s not in self.mdp.terminal_states:
+                for a in range(self.mdp.action_space.size):
+                    self.mdp.current_state = s # to force the execution of every action in each state
+                    s_next, _, _, _ = self.mdp.step(a)
+                    self.list_exp.append([s, a, 0, s_next]) # update list of experiences
+                    self.exp_last_s_next[s, a] = s_next # update next_state model
+                    self.exp_last_reward[s, a] = 0 # update reward model
                     self.T[s, s_next] += 1 # update transition matrix
 
     def need_term(self, params, plan_exp, s):
@@ -66,7 +66,6 @@ class Agent():
                 Q_mean = self.Q[s_e].copy()
                 Q_pre = Q_mean.copy()
                 # Policy before
-
                 if params.plan_policy == "softmax":
                     prob_a_pre = np.exp((Q_mean / params.tau)).round(5) / np.sum(np.exp((Q_mean / params.tau)).round(5))
 
@@ -79,10 +78,10 @@ class Agent():
                         prob_a_pre = np.zeros(self.mdp.action_space.size)
                         prob_a_pre[np.random.choice(np.where(Q_mean == Q_mean.max())[0])] = 1
 
-                if int(exps[-1,-1]) <  self.mdp.nb_states:
-                    s_next_val = np.max(self.Q[int(exps[-1, -1])]) # value of s_next of the last experience in the seq
-                else:
-                    s_next_val = 1
+                # if int(exps[-1,-1]) <  self.mdp.nb_states:
+                s_next_val = np.max(self.Q[int(exps[-1, -1])]) # value of s_next of the last experience in the seq
+                # else:
+                #     s_next_val = 1
 
                 steps_to_end = len(exps) - (j+1) # remaining steps to end of trajectory
                 rew_to_end = np.sum((params.gamma ** np.arange(steps_to_end + 1)) * exps[j: , 2])
@@ -121,7 +120,7 @@ class Agent():
         tmp_bis = np.repeat(np.arange(self.mdp.action_space.size), self.mdp.nb_states)
         plan_exp = np.column_stack((tmp, tmp_bis , self.exp_last_reward.flatten(), self.exp_last_s_next.flatten()))
         plan_exp = plan_exp.reshape((plan_exp.shape[0], 1 , plan_exp.shape[-1]))
-
+        # print(self.exp_last_s_next)
         if params.remove_samestate: # Remove actions that lead to same state (optional) -- e.g. hitting the wall
             idx = []
             for i in range(len(plan_exp)):
@@ -157,21 +156,21 @@ class Agent():
         seq_so_far = np.array(planning_backups)[seq_start: , : 4]
         s_n = seq_so_far[-1, -1]
 
-        if not s_n >= self.mdp.nb_states:
-            probs = np.zeros_like(self.Q[s_n])
-            probs[np.where(self.Q[s_n] == np.max(self.Q[s_n]))[0]] = 1 / len(np.where(self.Q[s_n] == np.max(self.Q[s_n]))[0]) # appended experience is sampled greedily
+        # if not s_n >= self.mdp.nb_states:
+        probs = np.zeros_like(self.Q[s_n])
+        probs[np.where(self.Q[s_n] == np.max(self.Q[s_n]))[0]] = 1 / len(np.where(self.Q[s_n] == np.max(self.Q[s_n]))[0]) # appended experience is sampled greedily
 
-            a_n = np.random.choice(self.mdp.action_space.size, p = probs) # Select action to append using the same action selection policy used in real experience
-            s_n_next = self.exp_last_s_next[s_n, a_n] # Resulting state from taking action an in state sn
-            r_n = self.exp_last_reward[s_n, a_n] # Reward received on this step only
+        a_n = np.random.choice(self.mdp.action_space.size, p = probs) # Select action to append using the same action selection policy used in real experience
+        s_n_next = self.exp_last_s_next[s_n, a_n] # Resulting state from taking action an in state sn
+        r_n = self.exp_last_reward[s_n, a_n] # Reward received on this step only
 
-            next_step_is_nan = np.isnan(self.exp_last_s_next[s_n, a_n]) or np.isnan(self.exp_last_reward[s_n, a_n]) # is a bool
+        next_step_is_nan = np.isnan(self.exp_last_s_next[s_n, a_n]) or np.isnan(self.exp_last_reward[s_n, a_n]) # is a bool
 
-            next_step_is_repeated = s_n_next in seq_so_far[:, 0] or s_n_next in seq_so_far[:, 3] # Check whether a loop is formed. Bool as well
-            # Notice that we cant enforce that planning is done only when the next state is not repeated or don't form aloop. The reason is that the next step needs to be derived 'on-policy', otherwise the Q-values may not converge.
-            if not next_step_is_nan and (params.allow_loops or not next_step_is_repeated): # If loops are not allowed and next state is repeated, don't expand this backup
-                seq_updated = np.concatenate((seq_so_far, np.array([s_n, a_n, r_n, s_n_next]).reshape(1, 4)), axis = 0)
-                plan_exp.append(seq_updated)
+        next_step_is_repeated = s_n_next in seq_so_far[:, 0] or s_n_next in seq_so_far[:, 3] # Check whether a loop is formed. Bool as well
+        # Notice that we cant enforce that planning is done only when the next state is not repeated or don't form aloop. The reason is that the next step needs to be derived 'on-policy', otherwise the Q-values may not converge.
+        if not next_step_is_nan and (params.allow_loops or not next_step_is_repeated): # If loops are not allowed and next state is repeated, don't expand this backup
+            seq_updated = np.concatenate((seq_so_far, np.array([s_n, a_n, r_n, s_n_next]).reshape(1, 4)), axis = 0)
+            plan_exp.append(seq_updated)
 
         return plan_exp
 
@@ -221,10 +220,7 @@ class Agent():
                     r_plan = np.sum(params.gamma ** np.arange(len(rew_to_end)) * rew_to_end)
                     n_plan = len(rew_to_end)
 
-                    if s_next_plan >= self.mdp.nb_states:
-                        s_next_value = 1
-                    else:
-                        s_next_value = np.max(self.Q[s_next_plan])
+                    s_next_value = np.max(self.Q[s_next_plan])
 
                     Q_target = r_plan + (params.gamma ** n_plan) * s_next_value
 
@@ -250,14 +246,10 @@ class Agent():
         """
         return r + self.mdp.gamma * np.max(self.Q[s_next,:])
 
-    def transition_from_goal(self, params, s_next):
-        if params.transi_goal_to_start:
-            s_next = self.start_state(params)
-
-        return s_next
-
     def start(self, params):
         s = self.mdp.reset(uniform = True)
+        while s in self.mdp.terminal_states:
+            s = self.mdp.reset(uniform = True)
         done = self.mdp.done()
         if not params.start_random:
             self.mdp.current_state = 0 # start state
@@ -274,15 +266,14 @@ class Agent():
         return a
 
     def update_transi(self, s, s_next, params):
-        if s not in self.mdp.terminal_states:
             target_vector = np.zeros(self.mdp.nb_states)
             target_vector[s_next] = 1 # Update transition matrix
             self.T[s, : ] += params.T_learning_rate  * (target_vector - self.T[s, :]) # Shift corresponding row of T towards targVec
 
     def update_exp(self, s, a, r, s_next):
-        self.list_exp.append([s, a, r, s_next]) # Add transition to expList
-        self.exp_last_s_next[s, a] = s_next # next state from last experience of this state/action
-        self.exp_last_reward[s, a] = r # rew from last experience of this state/action
+            self.list_exp.append([s, a, r, s_next]) # Add transition to expList
+            self.exp_last_s_next[s, a] = s_next # next state from last experience of this state/action
+            self.exp_last_reward[s, a] = r # rew from last experience of this state/action
 
     def do_backup_all_trace(self, params, delta):
         self.Q += (params.alpha * self.eTr ) * delta # TD learning
@@ -328,18 +319,19 @@ class Agent():
                 a = self.select_action(s, params)
                 # perform action
                 s_next, r, done, _ = self.mdp.step(a)
-
+                # if s_next == 47: print(s, "ok")
                 ep_reward += r
 
                 # update transi matrix and experience list
+
                 self.update_transi(s, s_next, params)
                 self.update_exp(s, a, r, s_next)
 
                 ### Q-Learning ###
-                if s in self.mdp.terminal_states:
-                    delta = r
-                else:
-                    delta = self.target(s_next, a, r) - self.Q[s,a] # prediction error
+                # if s in self.mdp.terminal_states:
+                #     delta = r
+                # else:
+                delta = self.target(s_next, a, r) - self.Q[s,a] # prediction error
 
                 self.update_elig_traces(s, a)
                 self.do_backup_all_trace(params , delta)
@@ -354,8 +346,8 @@ class Agent():
 
 
                 # move
-                if s not in self.mdp.terminal_states:
-                    s = s_next
+
+                s = s_next
                 starting = False
                 steps_to_done +=1
 
@@ -363,11 +355,11 @@ class Agent():
             #get next start location
             s_next, done = self.start(params)
             # print(s_next)
-            if params.transi_goal_to_start:
-                target_vector = np.zeros(self.mdp.nb_states)
-                target_vector[s_next] = 1 # Update transition matrix
-                self.T[s, : ] += params.T_learning_rate  * (target_vector - self.T[s, :]) # Shift corresponding row of T towards targVec
-                self.list_exp.append([s, np.nan, np.nan, s_next])
+            if s in self.mdp.terminal_states:
+                if params.transi_goal_to_start:
+                    self.update_transi(s, s_next, params)
+                    # self.update_exp(s, a, r, s_next)
+                    self.list_exp.append([s, np.nan, np.nan, s_next])
 
             self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size))
             tot_reward += ep_reward
@@ -377,8 +369,8 @@ class Agent():
             print("#### EPISODE {} ####".format(ep))
             print("TRAIN: {}".format(steps_to_done))
             # bug dans  Simple Maze MDP
-            if steps_to_done == 1 and params.start_random == False:
-                print("bug dans simple maze mdp, last episode not counted")
+            if steps_to_done == 1:
+                print("last episode not counted")
                 ep-=1
                 steps_to_exit_or_timeout.pop()
                 list_Q.pop()

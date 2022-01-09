@@ -10,7 +10,7 @@ def get_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--pre_explore", type = bool, default = True)
-    parser.add_argument("--start_random", type = bool, default = True)
+    parser.add_argument("--start_random", type = bool, default = False)
     parser.add_argument("--transi_goal_to_start", type = bool, default = True)
 
     parser.add_argument("--plan_policy", type = str, default = "softmax")

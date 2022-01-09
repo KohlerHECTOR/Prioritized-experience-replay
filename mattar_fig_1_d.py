@@ -27,15 +27,18 @@ mdp = create_random_maze(9, 6, 0.13)
 
 # using e-greedy pol for all models
 args.action_policy = "greedy"
+args.epsilon = 0
+args.start_random = True
+# args.expand_further = False
 #### MATTAR MODEL ####
 print("WITH PRIORITIZED REPLAY")
-res_train = []
+res_train_prio = []
 res_list_Q = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
     rat = Agent(mdp, args)
     data = rat.learn(args)
-    res_train.append(data["train"])
+    res_train_prio.append(data["train"])
     res_list_Q.append(data["list_Q"])
 
 res_eval = []
@@ -49,13 +52,13 @@ to_plot(np.array(res_eval), label = "Prioritized replay")
 print("DYNA-Q")
 args.set_all_gain_to_1 = True
 args.set_all_need_to_1 = True
-res_train = []
+res_train_dyna = []
 res_list_Q = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
     rat = Agent(mdp, args)
     data = rat.learn(args)
-    res_train.append(data["train"])
+    res_train_dyna.append(data["train"])
     res_list_Q.append(data["list_Q"])
 
 res_eval = []
@@ -67,16 +70,16 @@ to_plot(np.array(res_eval), label = "Dyna-Q")
 
 #### Q-learning######
 print("Q-learning")
-args.set_all_gain_to_1 = True
-args.set_all_need_to_1 = True
+args.set_all_gain_to_1 = False
+args.set_all_need_to_1 = False
 args.planning_steps = 0
-res_train = []
+res_train_nothing = []
 res_list_Q = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
     rat = Agent(mdp, args)
     data = rat.learn(args)
-    res_train.append(data["train"])
+    res_train_nothing.append(data["train"])
     res_list_Q.append(data["list_Q"])
 
 res_eval = []
@@ -94,7 +97,22 @@ plt.xlabel("episode")
 plt.ylabel("steps until goal")
 # plt.title("Performances of Mattar's agent in training and evalutation")
 plt.legend()
-filename = "mattar_fig_1_d"
+filename = "mattar_fig_1_d_eval"
 # for _, val in args._get_kwargs():
 #     filename += "_" + str(val)
 plt.savefig("results/Mattar/" + filename + ".png")
+plt.clf()
+
+to_plot(np.array(res_train_prio), label = "Prioritized replay")
+to_plot(np.array(res_train_dyna), label = "Dyna-Q")
+to_plot(np.array(res_train_nothing), label = "Q-learning")
+# to_plot(np.array(res_train), "train")
+plt.xlabel("episode")
+plt.ylabel("steps until goal")
+# plt.title("Performances of Mattar's agent in training and evalutation")
+plt.legend()
+filename = "mattar_fig_1_d_train"
+# for _, val in args._get_kwargs():
+#     filename += "_" + str(val)
+plt.savefig("results/Mattar/" + filename + ".png")
+plt.clf()
