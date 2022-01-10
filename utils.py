@@ -1,10 +1,10 @@
 import numpy as np
 from mazemdp.toolbox import softmax, egreedy
 def normalize_mat(matrix):
-    for i in range(len(matrix)):
-        matrix[i:] /= matrix[i:].sum()
+    row_sums = matrix.sum(axis=1)
+    new_matrix = matrix / row_sums[:, np.newaxis]
 
-    return matrix
+    return new_matrix
 
 def evaluate(list_q , mdp, params):
     """

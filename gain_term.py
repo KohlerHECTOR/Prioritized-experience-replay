@@ -1,5 +1,6 @@
 import numpy as np
 from proba import proba
+
 def gain_term(plan_exp, params, Q):
     Gain = []
     sa_Gain = np.zeros_like(Q)

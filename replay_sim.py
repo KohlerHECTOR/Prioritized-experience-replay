@@ -15,8 +15,12 @@ class Agent():
         self.T = np.zeros((self.mdp.nb_states, self.mdp.nb_states)) # state-state transition proba
         self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size)) # eligibility matrix
         self.list_exp = [] # list to store individual experiences (s, a, r, s')
-        self.exp_last_s_next = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next states
-        self.exp_last_reward = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
+        self.exp_last_s_next = np.empty((self.mdp.nb_states, self.mdp.action_space.size))#
+        self.exp_last_s_next[:] = np.NaN
+        self.exp_last_reward = np.empty((self.mdp.nb_states, self.mdp.action_space.size))
+        self.exp_last_reward[:] = np.NaN
+        # self.exp_last_s_next = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next states
+        # self.exp_last_reward = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
         self.nb_episodes = 0 # keep track of nb times we reached end of maze
 
 # TODO: code to store sim data using a sim_data class
@@ -49,7 +53,7 @@ class Agent():
                 if plan_exp[i][0][0] != plan_exp[i][0][3]:
                     idx.append(i)
             plan_exp = plan_exp[idx]
-
+        print(plan_exp.shape)
         plan_exp = list(plan_exp)
 
         return plan_exp
@@ -75,11 +79,7 @@ class Agent():
 
         seq_start = np.where(np.array(planning_backups)[:,-1] == 1)[0][-1]
         seq_so_far = np.array(planning_backups)[seq_start: , : 4]
-        s_n = seq_so_far[-1, -1]
-
-        if len(np.where(self.Q[s_n] == np.max(self.Q[s_n]))[0]) == len(self.Q[s_n]):
-            # no optimal action to extend
-            return plan_exp
+        s_n =int(seq_so_far[-1, -1])
 
         # if not s_n >= self.mdp.nb_states:
         probs = np.zeros_like(self.Q[s_n])
@@ -98,10 +98,10 @@ class Agent():
 
             seq_updated = np.concatenate((seq_so_far, np.array([s_n, a_n, r_n, s_n_next]).reshape(1, 4)), axis = 0)
             plan_exp.append(seq_updated)
-
         return plan_exp
 
     def do_planning(self, params, s):
+        print("planning")
         planning_backups = []
         backups_need = []
         backups_gain = []
@@ -116,9 +116,9 @@ class Agent():
             if params.expand_further and len(planning_backups) > 0:
                 plan_exp = self.expand(params, plan_exp , planning_backups)
 
-            Gain, sa_Gain = gain_term(plan_exp, params, self.Q)
+            Gain, sa_Gain = gain_term(plan_exp, params, self.Q.copy())
 
-            need, SR_or_SD = need_term(params ,plan_exp, s, self.T)
+            need, SR_or_SD = need_term(params ,plan_exp, s, self.T.copy())
 
             mask_need = 1
             if params.set_all_need_to_1:
@@ -131,15 +131,13 @@ class Agent():
 
             EVM = [] # Expected value of memories
             for i, exps in enumerate(plan_exp):
-                EVM.append(np.sum((need[i][-1] ** mask_need) * (np.maximum(Gain[i], params.baseline_gain))) ** mask_gain) # Use the need from the last (appended) state
-
+                EVM.append(np.sum((need[i][-1] ** mask_need) * (np.maximum(Gain[i], params.baseline_gain))** mask_gain) ) # Use the need from the last (appended) state
 
             opport_cost = np.nan_to_num(np.array(self.list_exp)[:,2]).mean() # Average expected reward from a random act
             EVM_thresh = min(opport_cost, params.EVM_thresh) # if EVMthresh==Inf, threshold is opportCost
             if np.max(EVM) > EVM_thresh:
                 # Identify state-action pairs with highest priority
                 max_EVM_idx = self.get_max_EVM_idx(EVM, plan_exp)
-
                 # N-step backup with most useful traj
                 for n, exp in enumerate(plan_exp[max_EVM_idx]):
                     s_plan = int(exp[0])
@@ -159,15 +157,10 @@ class Agent():
                 backups_need.append(need[max_EVM_idx]) # List of NEED for backups executed
                 backups_EVM.append(EVM[max_EVM_idx]) # List of EVM for backups executed
                 planning_backups.append(np.concatenate((plan_exp[max_EVM_idx][-1], [len(plan_exp[max_EVM_idx])]))) # Notice that the first column of planning_backups corresponds to the start state of the final transition on a multistep sequence
-
+                # print(np.concatenate((plan_exp[max_EVM_idx][-1], [len(plan_exp[max_EVM_idx])])))
             else:
                 break
 
-    def do_backup(self, params, s, a, r, s_next):
-        """
-        Bellman backup
-        """
-        self.Q[s,a] = self.Q[s,a] + params.alpha * (self.target(s_next, a, r) - self.Q[s,a])
 
     def target(self, gamma, s_next, a, r):
         """
@@ -226,12 +219,10 @@ class Agent():
                     assert self.T[term_state,  -1] == 0
 
         tot_reward = 0
-
         ep = 0
         steps_to_done = 0
-        # plan = 0
         ep_reward = 0
-        starting = True
+        previous_was_goal = False
         np.random.seed(seed)
         s, done = self.start(params)
         while ep < params.episodes:
@@ -240,39 +231,34 @@ class Agent():
                 # action selection
                 proba_a = proba(self.Q[s], params.action_policy, params)
                 a = np.random.choice(self.mdp.action_space.size, p = proba_a)
-                # a = self.select_action(s, params)
                 # perform action
                 s_next, r, done, _ = self.mdp.step(a)
                 ep_reward += r
 
                 # update transi matrix and experience list
-
                 self.update_transi(s, s_next, params.T_learning_rate)
                 self.update_exp(s, a, r, s_next)
 
                 ### Q-Learning ###
-                # if s in self.mdp.terminal_states:
-                #     delta = r
-                # else:
                 delta = self.target(params.gamma, s_next, a, r) - self.Q[s,a] # prediction error
-
                 self.update_elig_traces(s, a)
                 self.do_backup_all_trace(params.alpha , delta)
                 self.decay_elig_traces(params.gamma, params.lambda_)
 
-
+                ## Planning ###
                 if params.plan_only_start_end: #Only do replay if either current or last trial was a goal state
-                    if (starting and tot_reward > 0) or done or s_next in self.mdp.terminal_states:
-                        # plan += 1
+                    if previous_was_goal or s_next in self.mdp.terminal_states:
                         self.do_planning(params, s)
                 else:
                     self.do_planning(params, s)
 
                 # move
-
                 s = s_next
-                starting = False
+
                 steps_to_done +=1
+                previous_was_goal = False
+                if s in self.mdp.terminal_states:
+                    previous_was_goal = True
 
             # END EPISODE #
             #get next start location
@@ -282,7 +268,7 @@ class Agent():
                 if params.transi_goal_to_start:
                     self.update_transi(s, s_next, params.T_learning_rate)
                     # self.update_exp(s, a, r, s_next)
-                    self.list_exp.append([s, np.nan, np.nan, s_next])
+                    self.list_exp.append([s, np.NaN, np.NaN, s_next])
 
             self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size))
             tot_reward += ep_reward
@@ -300,10 +286,8 @@ class Agent():
             #     list_Q.pop()
 
             ep += 1
-            # plan = 0
             steps_to_done = 0
             ep_reward = 0
-            starting = True
             # move agent to start location
             s = s_next
 

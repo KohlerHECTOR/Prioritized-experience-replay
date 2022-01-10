@@ -28,7 +28,7 @@ mdp = create_random_maze(9, 6, 0.2)
 # using e-greedy pol for all models
 args.action_policy = "greedy"
 args.epsilon = 0
-args.start_random = True
+# args.start_random = True
 print(get_args_string(args))
 #### MATTAR MODEL ####
 print("WITH PRIORITIZED REPLAY")

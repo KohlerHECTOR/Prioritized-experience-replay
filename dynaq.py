@@ -87,7 +87,8 @@ class DynaQAgent():
               render: bool = True,
               timeout: int = 50, # episode length
               seed: int = 42,
-              plan_only_start_end: bool = False
+              plan_only_start_end: bool = False,
+              random_start: bool = False
              ):
 
         """
@@ -104,10 +105,13 @@ class DynaQAgent():
         tot_reward = 0
         for _ in range(nb_episodes):
             ep_reward = 0
-            s = self.mdp.reset()
-            self.mdp.current_state = 0 #Sutton&Barto's simulation always starts from same state.
-            s = self.mdp.current_state
             np.random.seed(seed)
+            s = self.mdp.reset(uniform = True)
+            while s in self.mdp.terminal_states:
+                s = self.mdp.reset(uniform = True)
+            if not random_start:
+                self.mdp.current_state = 0 #Sutton&Barto's simulation always starts from same state.
+                s = self.mdp.current_state
             done = self.mdp.done()
             steps = 0
             starting = True
