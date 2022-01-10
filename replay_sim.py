@@ -53,7 +53,7 @@ class Agent():
                 if plan_exp[i][0][0] != plan_exp[i][0][3]:
                     idx.append(i)
             plan_exp = plan_exp[idx]
-        print(plan_exp.shape)
+            
         plan_exp = list(plan_exp)
 
         return plan_exp
@@ -79,6 +79,7 @@ class Agent():
 
         seq_start = np.where(np.array(planning_backups)[:,-1] == 1)[0][-1]
         seq_so_far = np.array(planning_backups)[seq_start: , : 4]
+        print(seq_so_far)
         s_n =int(seq_so_far[-1, -1])
 
         # if not s_n >= self.mdp.nb_states:
