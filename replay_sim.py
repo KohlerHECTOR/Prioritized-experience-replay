@@ -113,6 +113,7 @@ class Agent():
             Gain.append(gain_i)
 
         return Gain, sa_Gain
+        
     def get_plan_exp(self, params):
         # Data structure stuff
         # Create a list of 1-step backups based on 1-step models
@@ -168,7 +169,9 @@ class Agent():
 
         next_step_is_repeated = s_n_next in seq_so_far[:, 0] or s_n_next in seq_so_far[:, 3] # Check whether a loop is formed. Bool as well
         # Notice that we cant enforce that planning is done only when the next state is not repeated or don't form aloop. The reason is that the next step needs to be derived 'on-policy', otherwise the Q-values may not converge.
+
         if not next_step_is_nan and (params.allow_loops or not next_step_is_repeated): # If loops are not allowed and next state is repeated, don't expand this backup
+
             seq_updated = np.concatenate((seq_so_far, np.array([s_n, a_n, r_n, s_n_next]).reshape(1, 4)), axis = 0)
             plan_exp.append(seq_updated)
 
@@ -190,6 +193,7 @@ class Agent():
                 plan_exp = self.expand(params, plan_exp , planning_backups)
 
             Gain, sa_Gain = self.gain_term(plan_exp, params)
+
             need, SR_or_SD = self.need_term(params ,plan_exp, s)
 
             mask_need = 1
@@ -205,9 +209,9 @@ class Agent():
             for i, exps in enumerate(plan_exp):
                 EVM.append(np.sum((need[i][-1] ** mask_need) * (np.maximum(Gain[i], params.baseline_gain))) ** mask_gain) # Use the need from the last (appended) state
 
-            opport_cost = np.array(self.list_exp)[:,2].mean() # Average expected reward from a random act
-            EVM_thresh = min(opport_cost, params.EVM_thresh) # if EVMthresh==Inf, threshold is opportCost
 
+            opport_cost = np.nan_to_num(np.array(self.list_exp)[:,2]).mean() # Average expected reward from a random act
+            EVM_thresh = min(opport_cost, params.EVM_thresh) # if EVMthresh==Inf, threshold is opportCost
             if np.max(EVM) > EVM_thresh:
                 # Identify state-action pairs with highest priority
                 max_EVM_idx = self.get_max_EVM_idx(EVM, plan_exp)
@@ -302,7 +306,8 @@ class Agent():
                     self.T[term_state, 0] = 1 # transition from goal to start
 
                 else:
-                    self.T[term_state, :] = 1/self.mdp.nb_states # transition from goal to any state is uniform
+                    self.T[term_state, :-1] = 1/(self.mdp.nb_states - 1) # transition from goal to any state is uniform
+                    assert self.T[term_state,  -1] == 0
 
         tot_reward = 0
 
@@ -339,7 +344,7 @@ class Agent():
 
 
                 if params.plan_only_start_end: #Only do replay if either current or last trial was a goal state
-                    if (starting and tot_reward > 0) or s in self.mdp.terminal_states:
+                    if (starting and tot_reward > 0) or s_next in self.mdp.terminal_states:
                         self.do_planning(params, s)
                 else:
                     self.do_planning(params, s)

@@ -14,7 +14,7 @@ from dynaq import DynaQAgent
 os.environ["VIDEO_FPS"] = "5"
 
 
-mdp = create_random_maze(9, 6, 0.13)
+mdp = create_random_maze(9, 6, 0.2)
 
 # Sutton and Barto parameters (figure 8.5 from Intro to RL) with eps_greedy pol
 # alpha = 0.1, eps = 0.1, gamma = 0.95

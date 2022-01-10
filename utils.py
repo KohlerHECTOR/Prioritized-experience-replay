@@ -18,7 +18,7 @@ def evaluate(list_q , mdp, params):
         ## BEGIN EPISODE ##
         s = mdp.reset()
         done = mdp.done()
-        np.random.seed(i)
+        # np.random.seed(i)
         steps_to_exit = 0
         while not done:
             # Draw an action using a softmax policy

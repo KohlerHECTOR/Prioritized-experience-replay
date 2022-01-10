@@ -112,7 +112,7 @@ class DynaQAgent():
             s = self.mdp.reset()
             self.mdp.current_state = 0 #Sutton&Barto's simulation always starts from same state.
             s = self.mdp.current_state
-            # np.random.seed(seed)
+            np.random.seed(seed)
             done = self.mdp.done()
             steps = 0
             while not done:
