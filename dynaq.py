@@ -78,13 +78,6 @@ class DynaQAgent():
 
         # actual planning
         r, s_next = self.Model[(s, a)]
-        # q_old = self.Q.copy()  #q_old and q_new are fore the gain computation
-
-        # if s in self.mdp.terminal_states:
-        #     self.Q[s, a] = self.alpha * r
-        #
-        # else:
-        #     # Backup
         self.backup(s, a, r, s_next)
 
     def learn(self,
@@ -93,7 +86,8 @@ class DynaQAgent():
               n: int = 50, # planning steps
               render: bool = True,
               timeout: int = 50, # episode length
-              seed: int = 42
+              seed: int = 42,
+              plan_only_start_end: bool = False
              ):
 
         """
@@ -102,19 +96,21 @@ class DynaQAgent():
         """
 
         self.mdp.timeout = timeout  # episode length
-        list_steps_episode = []# to plot
-
+        list_steps_episode_eval = []# to plot
+        steps_to_exit_train = []
         if render:
             self.mdp.new_render("Dyna-Q e-greedy")
 
+        tot_reward = 0
         for _ in range(nb_episodes):
-
+            ep_reward = 0
             s = self.mdp.reset()
             self.mdp.current_state = 0 #Sutton&Barto's simulation always starts from same state.
             s = self.mdp.current_state
             np.random.seed(seed)
             done = self.mdp.done()
             steps = 0
+            starting = True
             while not done:
 
                 # Update visited states
@@ -128,36 +124,36 @@ class DynaQAgent():
                 self.visited_states[s][a] = True
                 # Execute action a
                 s_next, r, done, _ = self.mdp.step(a)
-                # q_old = self.Q.copy() # q_old and q_new are fore the gain computation
+                ep_reward +=1
 
-                # if s in self.mdp.terminal_states:
-                #     self.Q[s, a] = self.alpha * r
-                #
-                # else:
-                #     # Backup
+                #backup
                 self.backup(s, a, r, s_next)
-
-
 
                 # Update Model
                 self.update_model(s, a, r, s_next)
 
-
                 # Planning
-                for _ in range(n):
-                    self.planning(eps)
+                if plan_only_start_end:
+                    if done or (starting and tot_reward >0):
+                        for _ in range(n):
+                            self.planning(eps)
+                else:
+                    for _ in range(n):
+                        self.planning(eps)
+
 
                 # Update the agent position
                 s = s_next
+                steps +=1
+                starting = False
 
-
-            steps_to_exit = self.evaluate(eps, seed)
-
-            list_steps_episode.append(steps_to_exit)
-
+            tot_reward += ep_reward
+            steps_to_exit_eval = self.evaluate(eps, seed)
+            list_steps_episode_eval.append(steps_to_exit_eval)
+            steps_to_exit_train.append(steps)
         if render:
             # Show the final policy
             self.mdp.current_state = 0
             self.mdp.render(self.Q, np.argmax(self.Q, axis=1), title="Dyna-Q e-greedy")
 
-        return list_steps_episode
+        return steps_to_exit_train, list_steps_episode_eval

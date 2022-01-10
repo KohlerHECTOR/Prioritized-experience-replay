@@ -22,7 +22,7 @@ mdp = create_random_maze(9, 6, 0.2)
 ALPHA = 0.1
 EPS = 0.1
 GAMMA = 0.95
-NB_EXP =  30
+NB_EXP =  300
 
 print("-------- Rat does 0 steps of planning ----------")
 to_plot_planning_0 = []
@@ -30,7 +30,8 @@ to_plot_planning_0 = []
 rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
-    to_plot_planning_0.append(rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 0, timeout = 20000, seed = i ))
+    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 30, render = False, n = 0, timeout = 20000, seed = i )
+    to_plot_planning_0.append(data_eval)
     print("Experience number: {}".format(i + 1))
 
 to_plot_planning_0 = np.array(to_plot_planning_0).mean(axis = 0)
@@ -41,7 +42,8 @@ to_plot_planning_5 = []
 rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
-    to_plot_planning_5.append(rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 5, timeout = 20000, seed = i))
+    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 30, render = False, n = 5, timeout = 20000, seed = i)
+    to_plot_planning_5.append(data_eval)
     print("Experience number: {}".format(i + 1))
 
 to_plot_planning_5 = np.array(to_plot_planning_5).mean(axis = 0)
@@ -52,7 +54,8 @@ to_plot_planning_50 = []
 rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
-    to_plot_planning_50.append(rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 50, timeout = 20000, seed = i))
+    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 30, render = False, n = 50, timeout = 20000, seed = i)
+    to_plot_planning_50.append(data_eval)
     print("Experience number: {}".format(i + 1))
 
 to_plot_planning_50 = np.array(to_plot_planning_50).mean(axis = 0)

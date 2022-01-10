@@ -35,7 +35,7 @@ def train_model(mdp, args):
     for i in range(args.simulations):
         print("#### SIM NB: {}".format(i))
         rat = Agent(mdp, args)
-        data = rat.learn(args)
+        data = rat.learn(args, seed = i)
         res_train.append(data["train"])
         res_list_Q.append(data["list_Q"])
 
@@ -49,6 +49,19 @@ def eval_model(list_Qs, mdp, args):
 
 if __name__ == '__main__':
     args = get_args()
+
+
+    # Dyna q #
+    # args.set_all_gain_to_1 = True
+    # args.set_all_need_to_1 = True
+    # args.action_policy = "greedy"
+    # args.plan_policy = "greedy"
+    # args.alpha = 0.1
+    # args.epsilon = 0.1
+    # args.transi_goal_to_start = False
+    # args.max_episode_steps = 3000
+    # args.expand_further = False
+    # Dyna q #
     print(args)
     mdp = create_random_maze(9, 6, 0.13)
     train_data, list_Qs = train_model(mdp, args)
