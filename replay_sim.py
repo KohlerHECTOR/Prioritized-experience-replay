@@ -6,6 +6,7 @@ from need_term import need_term
 from gain_term import gain_term
 import sys
 from proba import proba
+import numpy.matlib
 class Agent():
 
     def __init__(self, mdp, params):
@@ -17,10 +18,10 @@ class Agent():
         self.list_exp = [] # list to store individual experiences (s, a, r, s')
         self.exp_last_s_next = np.empty((self.mdp.nb_states, self.mdp.action_space.size))#
         self.exp_last_s_next[:] = np.NaN
-        self.exp_last_reward = np.empty((self.mdp.nb_states, self.mdp.action_space.size))
-        self.exp_last_reward[:] = np.NaN
+        self.exp_last_rew = np.empty((self.mdp.nb_states, self.mdp.action_space.size))
+        self.exp_last_rew[:] = np.NaN
         # self.exp_last_s_next = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next states
-        # self.exp_last_reward = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
+        # self.exp_last_rew = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
         self.nb_episodes = 0 # keep track of nb times we reached end of maze
 
 # TODO: code to store sim data using a sim_data class
@@ -35,7 +36,7 @@ class Agent():
                     s_next, _, _, _ = self.mdp.step(a)
                     self.list_exp.append([s, a, 0, s_next]) # update list of experiences
                     self.exp_last_s_next[s, a] = s_next # update next_state model
-                    self.exp_last_reward[s, a] = 0 # update reward model
+                    self.exp_last_rew[s, a] = 0 # update reward model
                     self.T[s, s_next] += 1 # update transition matrix
 
     def get_plan_exp(self, params):
@@ -43,7 +44,7 @@ class Agent():
         # Create a list of 1-step backups based on 1-step models
         tmp = np.tile(np.arange(self.mdp.nb_states), self.mdp.action_space.size)
         tmp_bis = np.repeat(np.arange(self.mdp.action_space.size), self.mdp.nb_states)
-        plan_exp = np.column_stack((tmp, tmp_bis , self.exp_last_reward.flatten(), self.exp_last_s_next.flatten()))
+        plan_exp = np.column_stack((tmp, tmp_bis , self.exp_last_rew.flatten(), self.exp_last_s_next.flatten()))
         plan_exp = plan_exp.reshape((plan_exp.shape[0], 1 , plan_exp.shape[-1]))
         plan_exp = np.nan_to_num(plan_exp)
 
@@ -53,7 +54,7 @@ class Agent():
                 if plan_exp[i][0][0] != plan_exp[i][0][3]:
                     idx.append(i)
             plan_exp = plan_exp[idx]
-            
+
         plan_exp = list(plan_exp)
 
         return plan_exp
@@ -77,10 +78,9 @@ class Agent():
 
     def expand(self, params, plan_exp, planning_backups):
 
-        seq_start = np.where(np.array(planning_backups)[:,-1] == 1)[0][-1]
+        seq_start = np.where(np.array(planning_backups)[:,4] == 1)[0][-1]
         seq_so_far = np.array(planning_backups)[seq_start: , : 4]
-        print(seq_so_far)
-        s_n =int(seq_so_far[-1, -1])
+        s_n =int(seq_so_far[-1, 3])
 
         # if not s_n >= self.mdp.nb_states:
         probs = np.zeros_like(self.Q[s_n])
@@ -88,9 +88,9 @@ class Agent():
 
         a_n = np.random.choice(self.mdp.action_space.size, p = probs) # Select action to append using the same action selection policy used in real experience
         s_n_next = self.exp_last_s_next[s_n, a_n] # Resulting state from taking action an in state sn
-        r_n = self.exp_last_reward[s_n, a_n] # Reward received on this step only
+        r_n = self.exp_last_rew[s_n, a_n] # Reward received on this step only
 
-        next_step_is_nan = np.isnan(self.exp_last_s_next[s_n, a_n]) or np.isnan(self.exp_last_reward[s_n, a_n]) # is a bool
+        next_step_is_nan = np.isnan(self.exp_last_s_next[s_n, a_n]) or np.isnan(self.exp_last_rew[s_n, a_n]) # is a bool
 
         next_step_is_repeated = s_n_next in seq_so_far[:, 0] or s_n_next in seq_so_far[:, 3] # Check whether a loop is formed. Bool as well
         # Notice that we cant enforce that planning is done only when the next state is not repeated or don't form aloop. The reason is that the next step needs to be derived 'on-policy', otherwise the Q-values may not converge.
@@ -102,22 +102,119 @@ class Agent():
         return plan_exp
 
     def do_planning(self, params, s):
-        print("planning")
-        planning_backups = []
-        backups_need = []
-        backups_gain = []
-        backups_EVM = []
-        # print("---- Planning ----")
+        # print("planning")
+        # planning_backups = []
+        # backups_need = []
+        # backups_gain = []
+        # backups_EVM = []
+        # # print("---- Planning ----")
+        #
+        # for plan in range(params.planning_steps):
+        #
+        #     plan_exp = self.get_plan_exp(params)
+        #
+        #     #Expand previous backup with one extra action
+        #     if params.expand_further and len(planning_backups) > 0:
+        #         plan_exp = self.expand(params, plan_exp , planning_backups)
+        #
+        #     Gain, sa_Gain = gain_term(plan_exp, params, self.Q.copy())
+        #
+        #     need, SR_or_SD = need_term(params ,plan_exp, s, self.T.copy())
+        #
+        #     mask_need = 1
+        #     if params.set_all_need_to_1:
+        #         mask_need = 0
+        #
+        #     mask_gain = 1
+        #     if params.set_all_gain_to_1:
+        #         mask_gain = 0
+        #
+        #
+        #     EVM = [] # Expected value of memories
+        #     for i, exps in enumerate(plan_exp):
+        #         EVM.append(np.sum((need[i][-1] ** mask_need) * (np.maximum(Gain[i], params.baseline_gain))** mask_gain) ) # Use the need from the last (appended) state
+        #
+        #     opport_cost = np.nan_to_num(np.array(self.list_exp)[:,2]).mean() # Average expected reward from a random act
+        #     EVM_thresh = min(opport_cost, params.EVM_thresh) # if EVMthresh==Inf, threshold is opportCost
+        #     if np.max(EVM) > EVM_thresh:
+        #         # Identify state-action pairs with highest priority
+        #         max_EVM_idx = self.get_max_EVM_idx(EVM, plan_exp)
+        #         # N-step backup with most useful traj
+        #         for n, exp in enumerate(plan_exp[max_EVM_idx]):
+        #             s_plan = int(exp[0])
+        #             a_plan =int(exp[1])
+        #             s_next_plan = int(plan_exp[max_EVM_idx][-1, -1]) # Notice the use of 'end' instead of 'n', meaning that stp1_plan is the final state of the trajectory
+        #             rew_to_end = plan_exp[max_EVM_idx][n:, 2] # Individual rewards from this step to end of trajectory
+        #             r_plan = np.sum(params.gamma ** np.arange(len(rew_to_end)) * rew_to_end)
+        #             n_plan = len(rew_to_end)
+        #
+        #             s_next_value = np.max(self.Q[s_next_plan])
+        #
+        #             Q_target = r_plan + (params.gamma ** n_plan) * s_next_value
+        #
+        #             self.Q[s_plan, a_plan] += params.alpha * (Q_target - self.Q[s_plan, a_plan])
+        #
+        #         backups_gain.append(Gain[max_EVM_idx]) # List of GAIN for backups executed
+        #         backups_need.append(need[max_EVM_idx]) # List of NEED for backups executed
+        #         backups_EVM.append(EVM[max_EVM_idx]) # List of EVM for backups executed
+        #         planning_backups.append(np.concatenate((plan_exp[max_EVM_idx][-1], [len(plan_exp[max_EVM_idx])]))) # Notice that the first column of planning_backups corresponds to the start state of the final transition on a multistep sequence
+        #         # print(np.concatenate((plan_exp[max_EVM_idx][-1], [len(plan_exp[max_EVM_idx])])))
+        #     else:
+        #         break
+        planning_backups = np.empty((0, 5))
+        backups_gain = []  # List of GAIN for backups executed
+        backups_need = []  # List of NEED for backups executed
+        backups_EVM = []  # List of EVM for backups executed
+        backups_TD = []  # List of (abs(TD)) for backups executed (in case of PS)
 
-        for plan in range(params.planning_steps):
+        for p in range(params.planning_steps):
 
-            plan_exp = self.get_plan_exp(params)
+            # Create a list of 1-step backups based on 1-step models
+            plan_exp = np.concatenate((np.matlib.repmat(np.arange(self.mdp.nb_states), 1, self.mdp.action_space.size).reshape(
+                self.mdp.action_space.size * self.mdp.nb_states, 1),
+                                       np.repeat(np.arange(self.mdp.action_space.size), self.mdp.nb_states, axis=0).reshape(
+                                           self.mdp.action_space.size * self.mdp.nb_states, 1),
+                                       np.column_stack(self.exp_last_rew).reshape(self.mdp.action_space.size * self.mdp.nb_states,
+                                                                                  1),
+                                       np.column_stack(self.exp_last_s_next).reshape(self.mdp.action_space.size * self.mdp.nb_states,
+                                                                                   1)),
+                axis=1)
+            # Remove NaNs -- e.g. actions starting from invalid states, such as walls:
+            plan_exp = plan_exp[np.invert(np.isnan(plan_exp).any(axis=1))]
+            # Remove actions that lead to same state (optional) -- e.g. hitting the wall:
+            if params.remove_samestate:
+                plan_exp = plan_exp[plan_exp[:, 0] != plan_exp[:, 3]]
+            plan_exp = list(plan_exp)  # use plan_exp to hold all steps of any n-step trajectory
 
-            #Expand previous backup with one extra action
-            if params.expand_further and len(planning_backups) > 0:
-                plan_exp = self.expand(params, plan_exp , planning_backups)
+            # Expand previous backup with one extra action
+            if params.expand_further and planning_backups.shape[0] > 0:
+                # Find the last entry in planning_backups with that started an n-step backup
+                seq_start = np.argwhere(planning_backups[:, 4] == 1)[-1]
+                seq_so_far = planning_backups[seq_start[0]:, 0:4]
+                s_n = int(seq_so_far[-1, 3])  # Final state reached in the last planning step
+                probs = np.zeros(self.Q[s_n].shape)
+                # Appended experience is sampled greedily:
+                probs[self.Q[s_n] == max(self.Q[s_n])] = 1 / np.sum(self.Q[s_n] == max(self.Q[s_n]))
+                #  Select action to append using the same action selection policy used in real experience
+                a_n = np.random.choice(self.mdp.action_space.size, p = probs)
+                s_n_next = self.exp_last_s_next[s_n, a_n]  # Resulting state from taking action an in state sn
+                r_n = self.exp_last_rew[s_n, a_n]  # Reward received on this step only
+                next_step_is_nan = np.isnan(s_n_next) or np.isnan(
+                    r_n)  # Check whether the retrieved rew and stp1 are NaN
+                # Check whether a loop is formed
+                next_step_is_repeated = np.isin(s_n_next, [seq_so_far[:, 0], seq_so_far[:, 3]])
+                # p.s. Notice that we can't enforce that planning is done only when the next state is not
+                # repeated or doesn't form a loop. The reason is that the next step needs to be derived
+                # 'on-policy', otherwise the Q-values may not converge.
 
-            Gain, sa_Gain = gain_term(plan_exp, params, self.Q.copy())
+                # If loops are  allowed and next state is not repeated, then expand this backup
+                if not next_step_is_nan and (params.allow_loops or not next_step_is_repeated):
+                    # Add one row to seq_updated (i.e., append one transition). Notice that seq_updated has many
+                    # rows, one for each appended step
+                    seq_updated = np.append(seq_so_far, np.array([[s_n, a_n, r_n, s_n_next]]), axis=0)
+                    plan_exp.append(seq_updated)
+
+            gain, sa_gain = gain_term(plan_exp, params, self.Q.copy())
 
             need, SR_or_SD = need_term(params ,plan_exp, s, self.T.copy())
 
@@ -129,36 +226,82 @@ class Agent():
             if params.set_all_gain_to_1:
                 mask_gain = 0
 
+            # Expected value of memories
 
-            EVM = [] # Expected value of memories
-            for i, exps in enumerate(plan_exp):
-                EVM.append(np.sum((need[i][-1] ** mask_need) * (np.maximum(Gain[i], params.baseline_gain))** mask_gain) ) # Use the need from the last (appended) state
+            EVM = np.full((len(plan_exp)), np.nan)
+            for i in range(len(plan_exp)):
+                if len(plan_exp[i].shape) == 1:
+                    EVM[i] = (need[i][-1] ** mask_need) * (max(gain[i], params.baseline_gain) ** mask_gain)
+                elif len(plan_exp[i].shape) == 2:
+                    EVM[i] = 0
+                    for x in range(len(plan_exp[i])):
+                        EVM[i] += (need[i][-1] ** mask_need) * (max(gain[i][-1], params.baseline_gain) ** mask_gain)
+                else:
+                    err_msg = 'plan_exp[i] does not have the correct shape. It is {} but should have a ' \
+                              'length equal to 1 or 2, e.g. (4,) or (2, 4)'.format(plan_exp[i].shape)
+                    raise ValueError(err_msg)
 
-            opport_cost = np.nan_to_num(np.array(self.list_exp)[:,2]).mean() # Average expected reward from a random act
-            EVM_thresh = min(opport_cost, params.EVM_thresh) # if EVMthresh==Inf, threshold is opportCost
-            if np.max(EVM) > EVM_thresh:
+            # PERFORM THE UPDATE
+            opport_cost = np.nanmean(np.array(self.list_exp)[:, 2])  # Average expected reward from a random act
+            EVM_thresh = min(opport_cost, params.EVM_thresh)  # if EVM_thresh==Inf, threshold is opport_cost
+
+            if max(EVM) > EVM_thresh:
                 # Identify state-action pairs with highest priority
-                max_EVM_idx = self.get_max_EVM_idx(EVM, plan_exp)
-                # N-step backup with most useful traj
-                for n, exp in enumerate(plan_exp[max_EVM_idx]):
-                    s_plan = int(exp[0])
-                    a_plan =int(exp[1])
-                    s_next_plan = int(plan_exp[max_EVM_idx][-1, -1]) # Notice the use of 'end' instead of 'n', meaning that stp1_plan is the final state of the trajectory
-                    rew_to_end = plan_exp[max_EVM_idx][n:, 2] # Individual rewards from this step to end of trajectory
-                    r_plan = np.sum(params.gamma ** np.arange(len(rew_to_end)) * rew_to_end)
-                    n_plan = len(rew_to_end)
+                max_EVM_idx = np.argwhere(EVM == max(EVM))
 
-                    s_next_value = np.max(self.Q[s_next_plan])
+                if len(max_EVM_idx) > 1:  # If there are multiple items with equal gain
+                    # number of total steps on this trajectory
+                    n_steps = np.array([arr.shape[0] if len(arr.shape) > 1 else 1 for arr in plan_exp])
+                    # Select the one corresponding to a shorter trajectory
+                    max_EVM_idx = max_EVM_idx[n_steps[max_EVM_idx] == min(n_steps[max_EVM_idx])]
+                    if len(max_EVM_idx) > 1:  # If there are still multiple items with equal gain (and equal length)
+                        max_EVM_idx = max_EVM_idx[np.random.randint(len(max_EVM_idx))]  # ... select one at random
+                else:
+                    max_EVM_idx = max_EVM_idx[0][0]
 
-                    Q_target = r_plan + (params.gamma ** n_plan) * s_next_value
+                plan_exp_arr = np.array(plan_exp, dtype=object)
+                if len(plan_exp_arr[max_EVM_idx].shape) == 1:
+                    plan_exp_arr_max = np.expand_dims(plan_exp_arr[max_EVM_idx], axis=0)
+                else:
+                    plan_exp_arr_max = np.expand_dims(plan_exp_arr[max_EVM_idx][-1], axis=0)
 
+                for n in range(plan_exp_arr_max.shape[0]):
+                    # Retrieve information from this experience
+                    s_plan = int(plan_exp_arr_max[n][0])
+                    a_plan = int(plan_exp_arr_max[n][1])
+                    # Individual rewards from this step to end of trajectory
+                    rew_to_end = plan_exp_arr_max[n:][:, 2]
+                    # Notice the use of '-1' instead of 'n', meaning that stp1_plan is the final state of the
+                    # trajectory
+                    stp1_plan = int(plan_exp_arr_max[-1][3])
+
+                    # Discounted cumulative reward from this step to end of trajectory
+                    n_plan = np.size(rew_to_end)
+                    r_plan = np.dot(np.power(params.gamma, np.arange(0, n_plan)), rew_to_end)
+
+                    # ADD PLAN Q_LEARNING UPDATES TO Q_LEARNING FUNCTION
+                    stp1_value = np.max(self.Q[stp1_plan])
+                    Q_target = r_plan + (params.gamma ** n_plan) * stp1_value
                     self.Q[s_plan, a_plan] += params.alpha * (Q_target - self.Q[s_plan, a_plan])
 
-                backups_gain.append(Gain[max_EVM_idx]) # List of GAIN for backups executed
-                backups_need.append(need[max_EVM_idx]) # List of NEED for backups executed
-                backups_EVM.append(EVM[max_EVM_idx]) # List of EVM for backups executed
-                planning_backups.append(np.concatenate((plan_exp[max_EVM_idx][-1], [len(plan_exp[max_EVM_idx])]))) # Notice that the first column of planning_backups corresponds to the start state of the final transition on a multistep sequence
-                # print(np.concatenate((plan_exp[max_EVM_idx][-1], [len(plan_exp[max_EVM_idx])])))
+                # self.times_for_EVB[self.num_episodes][p - 1] = time.perf_counter() - times_for_EVB
+
+                # List of planning backups (to be used in creating a plot with the full planning trajectory/trace)
+                backups_gain.append(gain[max_EVM_idx][0])  # List of GAIN for backups executed
+                backups_need.append(need[max_EVM_idx][0])  # List of NEED for backups executed
+                backups_EVM.append(EVM[max_EVM_idx])  # List of EVM for backups executed
+
+                if planning_backups.shape[0] > 0:
+                    planning_backups = np.vstack(
+                        [planning_backups, np.append(plan_exp_arr_max, plan_exp_arr_max.shape[0])])
+                elif planning_backups.shape[0] == 0:
+                    planning_backups = np.append(plan_exp_arr_max,
+                                                 plan_exp_arr_max.shape[0]).reshape(1, planning_backups.shape[1])
+                else:
+                    err_msg = 'planning_backups does not have the correct shape. It is {} but should have a ' \
+                              'length equal to 1 or 2, e.g. (5,) or (2, 5)'.format(planning_backups.shape)
+                    raise ValueError(err_msg)
+                p += 1  # Increment planning counter
             else:
                 break
 
@@ -187,7 +330,7 @@ class Agent():
     def update_exp(self, s, a, r, s_next):
             self.list_exp.append([s, a, r, s_next]) # Add transition to expList
             self.exp_last_s_next[s, a] = s_next # next state from last experience of this state/action
-            self.exp_last_reward[s, a] = r # rew from last experience of this state/action
+            self.exp_last_rew[s, a] = r # rew from last experience of this state/action
 
     def do_backup_all_trace(self, alpha, delta):
         self.Q += (alpha * self.eTr ) * delta # TD learning
@@ -278,13 +421,6 @@ class Agent():
 
             print("#### EPISODE {} ####".format(ep + 1))
             print("TRAIN: {}".format(steps_to_done))
-            # print("planned {} times".format(plan))
-            # bug dans  Simple Maze MDP
-            # if steps_to_done == 1:
-            #     print("last episode not counted")
-            #     ep-=1
-            #     steps_to_exit_or_timeout.pop()
-            #     list_Q.pop()
 
             ep += 1
             steps_to_done = 0

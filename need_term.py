@@ -14,10 +14,11 @@ def need_term(params, plan_exp, s, T):
         SR_or_SD = SRi;
 
     # Calculate need-term for each experience in nStepExps
-    for i, exps in enumerate(plan_exp):
-        need_i = []
-        for j , e in enumerate(exps):
-            need_i.append(SR_or_SD[int(e[0])])
-        need.append(need_i)
-
+    for i in range(len(plan_exp)):
+        this_exp = plan_exp[i]
+        if len(this_exp.shape) == 1:
+            this_exp = np.expand_dims(this_exp, axis=0)
+        need.append(np.repeat(np.nan, this_exp.shape[0]))
+        for j in range(this_exp.shape[0]):
+            need[i][j] = SR_or_SD[int(this_exp[j, 0])]
     return need, SR_or_SD
