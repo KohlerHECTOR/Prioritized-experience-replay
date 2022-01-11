@@ -10,7 +10,8 @@ from proba import proba
 import numpy.matlib
 class Agent():
 
-    def __init__(self, mdp, params):
+    def __init__(self, mdp, params, data_saver):
+        self.saver = data_saver
         self.mdp = mdp
         self.mdp.gamma = params.gamma
         self.Q = np.zeros((self.mdp.nb_states, self.mdp.action_space.size)) # state-action value function
@@ -21,18 +22,17 @@ class Agent():
         self.exp_last_s_next[:] = np.NaN
         self.exp_last_rew = np.empty((self.mdp.nb_states, self.mdp.action_space.size))
         self.exp_last_rew[:] = np.NaN
-        # self.exp_last_s_next = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next states
-        # self.exp_last_rew = np.zeros((self.mdp.nb_states, self.mdp.action_space.size), dtype = int) # list to store next rewards
         self.nb_episodes = 0 # keep track of nb times we reached end of maze
 
 # TODO: code to store sim data using a sim_data class
 
     def pre_explore(self):
         # To get initial Model
-        self.mdp.reset()
+
         for s in range(self.mdp.nb_states):
             if s not in self.mdp.terminal_states:
                 for a in range(self.mdp.action_space.size):
+                    self.mdp.reset()
                     self.mdp.current_state = s # to force the execution of every action in each state
                     s_next, _, _, _ = self.mdp.step(a)
                     self.list_exp.append([s, a, 0, s_next]) # update list of experiences
@@ -75,12 +75,7 @@ class Agent():
         max_EVM_idx = np.argwhere(EVM == max(EVM))
 
         if len(max_EVM_idx) > 1:  # If there are multiple items with equal gain
-            # number of total steps on this trajectory
-            n_steps = np.array([arr.shape[0] if len(arr.shape) > 1 else 1 for arr in plan_exp])
-            # Select the one corresponding to a shorter trajectory
-            max_EVM_idx = max_EVM_idx[n_steps[max_EVM_idx] == min(n_steps[max_EVM_idx])]
-            if len(max_EVM_idx) > 1:  # If there are still multiple items with equal gain (and equal length)
-                max_EVM_idx = max_EVM_idx[np.random.randint(len(max_EVM_idx))]  # ... select one at random
+            max_EVM_idx = self.tie_break(max_EVM_idx, plan_exp)
         else:
             max_EVM_idx = max_EVM_idx[0][0]
 
@@ -135,7 +130,7 @@ class Agent():
             need, SR_or_SD = need_term(params ,plan_exp, s, self.T.copy())
 
             EVM = get_EVM(params, plan_exp, gain, need)
-            
+
             # PERFORM THE UPDATE
             opport_cost = np.nanmean(np.array(self.list_exp)[:, 2])  # Average expected reward from a random act
             EVM_thresh = min(opport_cost, params.EVM_thresh)  # if EVM_thresh==Inf, threshold is opport_cost
@@ -189,6 +184,8 @@ class Agent():
                 p += 1  # Increment planning counter
             else:
                 break
+        self.saver.replay.state.append(planning_backups[:, 0])
+        self.saver.replay.action.append(planning_backups[:, 1])
 
 
     def target(self, gamma, s_next, a, r):
@@ -214,6 +211,7 @@ class Agent():
 
     def update_exp(self, s, a, r, s_next):
             self.list_exp.append([s, a, r, s_next]) # Add transition to expList
+            self.saver.list_exp.append([s, a, r, s_next])
             self.exp_last_s_next[s, a] = s_next # next state from last experience of this state/action
             self.exp_last_rew[s, a] = r # rew from last experience of this state/action
 
@@ -228,8 +226,6 @@ class Agent():
         self.eTr *= gamma * lambda_ # Decay eligibility trace
 
     def learn(self, params, seed):
-        list_Q = []
-        steps_to_exit_or_timeout = []
         self.mdp.timeout = params.max_episode_steps
 
         if params.pre_explore:
@@ -283,7 +279,7 @@ class Agent():
 
                 # move
                 s = s_next
-
+                self.saver.num_episodes.append(ep)
                 steps_to_done +=1
                 previous_was_goal = False
                 if s in self.mdp.terminal_states:
@@ -301,8 +297,9 @@ class Agent():
 
             self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size))
             tot_reward += ep_reward
-            list_Q.append(self.Q)
-            steps_to_exit_or_timeout.append(steps_to_done)
+            self.saver.steps_to_exit.append(steps_to_done)
+            self.saver.list_Q.append(self.Q)
+
 
             print("#### EPISODE {} ####".format(ep + 1))
             print("TRAIN: {}".format(steps_to_done))
@@ -313,4 +310,4 @@ class Agent():
             # move agent to start location
             s = s_next
 
-        return {"train" : steps_to_exit_or_timeout , "list_Q" : list_Q}
+        # return {"train" : steps_to_exit_or_timeout , "list_Q" : list_Q}

@@ -7,21 +7,12 @@ from mazemdp.maze import build_maze, create_random_maze
 from random import seed
 from mazemdp import create_random_maze
 from replay_sim import Agent
-from utils import evaluate
+from utils import evaluate, to_plot, Replay, SimuData
 
 from arguments import get_args, get_args_string
 
 
 args = get_args()
-
-
-
-def to_plot(data, label):
-    mean_data = np.mean(data, axis = 0)
-    std_data = np.std(data, axis = 0)
-    plt.plot(mean_data, label = label)
-    plt.fill_between(np.arange(len(mean_data)), mean_data + std_data, mean_data - std_data, alpha = 0.4)
-
 
 mdp = create_random_maze(9, 6, 0.2)
 
@@ -34,26 +25,30 @@ print(get_args_string(args))
 #### MATTAR MODEL ####
 print("WITH PRIORITIZED REPLAY")
 res_train_prio = []
-res_list_Q = []
+res_list_Q_prio = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
-    rat = Agent(mdp, args)
+    replay = Replay()
+    saver = SimuData(replay)
+    Agent(mdp, args, saver)
     data = rat.learn(args, seed = i)
-    res_train_prio.append(data["train"])
-    res_list_Q.append(data["list_Q"])
+    res_train_prio.append(saver.steps_to_exit)
+    res_list_Q_prio.append(saver.list_Q)
 
 #### Dyna - Q ######
 print("DYNA-Q")
 args.set_all_gain_to_1 = True
 args.set_all_need_to_1 = True
 res_train_dyna = []
-res_list_Q = []
+res_list_Q_dyna = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
-    rat = Agent(mdp, args)
-    data = rat.learn(args, seed = i)
-    res_train_dyna.append(data["train"])
-    res_list_Q.append(data["list_Q"])
+    replay = Replay()
+    saver = SimuData(replay)
+    rat = Agent(mdp, args, saver)
+    rat.learn(args, seed = i)
+    res_train_dyna.append(saver.steps_to_exit)
+    res_list_Q_dyna.append(saver.list_Q)
 
 #### Q-learning######
 print("Q-learning")
@@ -61,13 +56,15 @@ args.set_all_gain_to_1 = False
 args.set_all_need_to_1 = False
 args.planning_steps = 0
 res_train_nothing = []
-res_list_Q = []
+res_list_Q_nothing = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
-    rat = Agent(mdp, args)
-    data = rat.learn(args, seed = i)
-    res_train_nothing.append(data["train"])
-    res_list_Q.append(data["list_Q"])
+    replay = Replay()
+    saver = SimuData(replay)
+    rat = Agent(mdp, args, saver)
+    rat.learn(args, seed = i)
+    res_train_nothing.append(saver.steps_to_exit)
+    res_list_Q_nothing.append(saver.list_Q)
 
 to_plot(np.array(res_train_prio), label = "Prioritized replay")
 to_plot(np.array(res_train_dyna), label = "Dyna-Q")

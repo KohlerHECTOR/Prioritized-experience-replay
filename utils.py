@@ -1,5 +1,6 @@
 import numpy as np
 from mazemdp.toolbox import softmax, egreedy
+import matplotlib.pyplot as plt
 def normalize_mat(matrix):
     row_sums = matrix.sum(axis=1)
     new_matrix = matrix / row_sums[:, np.newaxis]
@@ -34,3 +35,24 @@ def evaluate(list_q , mdp, params):
         all_steps_to_exit.append(steps_to_exit)
 
     return all_steps_to_exit
+
+def to_plot(data, label = None):
+    mean_data = np.mean(data, axis = 0)
+    std_data = np.std(data, axis = 0)
+    plt.plot(mean_data, label = label)
+    plt.fill_between(np.arange(len(mean_data)), mean_data + std_data, mean_data - std_data, alpha = 0.4)
+
+# PLACEHOLDERS FOR ANALYSIS
+
+class SimuData():
+    def __init__(self, replay):
+        self.num_episodes = []
+        self.replay = replay
+        self.list_exp = []
+        self.steps_to_exit = []
+        self.list_Q = []
+
+class Replay():
+    def __init__(self):
+        self.action = []
+        self.state = []

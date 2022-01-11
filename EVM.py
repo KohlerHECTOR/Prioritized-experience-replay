@@ -1,6 +1,7 @@
 import numpy as np
 
 def get_EVM(params, plan_exp, gain, need):
+    
     mask_need = 1
     if params.set_all_need_to_1:
         mask_need = 0
@@ -8,7 +9,6 @@ def get_EVM(params, plan_exp, gain, need):
     mask_gain = 1
     if params.set_all_gain_to_1:
         mask_gain = 0
-
     # Expected value of memories
 
     EVM = np.full((len(plan_exp)), np.nan)

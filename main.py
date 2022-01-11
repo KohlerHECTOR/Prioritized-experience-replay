@@ -7,17 +7,10 @@ from mazemdp.maze import build_maze, create_random_maze
 from random import seed
 from mazemdp import create_random_maze
 from replay_sim import Agent
-from utils import evaluate
+from utils import evaluate, to_plot, SimuData, Replay
 
 from arguments import get_args, get_args_string
 
-
-
-def to_plot(data):
-    mean_data = np.mean(data, axis = 0)
-    std_data = np.std(data, axis = 0)
-    plt.plot(mean_data)
-    plt.fill_between(np.arange(len(mean_data)), mean_data + std_data, mean_data - std_data, alpha = 0.4)
 
 def save_figure(filename, data, title):
     to_plot(data)
@@ -34,10 +27,12 @@ def train_model(mdp, args):
     res_list_Q = []
     for i in range(args.simulations):
         print("#### SIM NB: {}".format(i))
-        rat = Agent(mdp, args)
-        data = rat.learn(args, seed = i)
-        res_train.append(data["train"])
-        res_list_Q.append(data["list_Q"])
+        replay = Replay()
+        saver = SimuData(replay)
+        rat = Agent(mdp, args, saver)
+        rat.learn(args, seed = i)
+        res_train.append(saver.steps_to_exit)
+        res_list_Q.append(saver.list_Q)
 
     return res_train, res_list_Q
 
