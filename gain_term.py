@@ -2,6 +2,7 @@ import numpy as np
 from proba import proba
 
 def gain_term(plan_exp, params, Q):
+    
     gain = []
     sa_gain = np.empty(Q.shape)
     sa_gain.fill(np.nan)

@@ -4,6 +4,7 @@ from mazemdp.toolbox import softmax, egreedy
 from mazemdp.mdp import Mdp
 from need_term import need_term
 from gain_term import gain_term
+from EVM import get_EVM
 import sys
 from proba import proba
 import numpy.matlib
@@ -133,29 +134,8 @@ class Agent():
 
             need, SR_or_SD = need_term(params ,plan_exp, s, self.T.copy())
 
-            mask_need = 1
-            if params.set_all_need_to_1:
-                mask_need = 0
-
-            mask_gain = 1
-            if params.set_all_gain_to_1:
-                mask_gain = 0
-
-            # Expected value of memories
-
-            EVM = np.full((len(plan_exp)), np.nan)
-            for i in range(len(plan_exp)):
-                if len(plan_exp[i].shape) == 1:
-                    EVM[i] = (need[i][-1] ** mask_need) * (max(gain[i], params.baseline_gain) ** mask_gain)
-                elif len(plan_exp[i].shape) == 2:
-                    EVM[i] = 0
-                    for x in range(len(plan_exp[i])):
-                        EVM[i] += (need[i][-1] ** mask_need) * (max(gain[i][-1], params.baseline_gain) ** mask_gain)
-                else:
-                    err_msg = 'plan_exp[i] does not have the correct shape. It is {} but should have a ' \
-                              'length equal to 1 or 2, e.g. (4,) or (2, 4)'.format(plan_exp[i].shape)
-                    raise ValueError(err_msg)
-
+            EVM = get_EVM(params, plan_exp, gain, need)
+            
             # PERFORM THE UPDATE
             opport_cost = np.nanmean(np.array(self.list_exp)[:, 2])  # Average expected reward from a random act
             EVM_thresh = min(opport_cost, params.EVM_thresh)  # if EVM_thresh==Inf, threshold is opport_cost
