@@ -23,7 +23,7 @@ python3 main.py --simulations 10 --episodes 30
 A figure of performances of the agent is saved in results/
 
 
-## Reproduce Mattar's results from fig 1.d (roughly 20 minutes run time)
+## Reproduce Mattar's results from fig 1.d (roughly 45 minutes run time)
 
 ```
 python3 mattar_fig_1_d.py --simulations 10 --episodes 20
@@ -31,14 +31,21 @@ python3 mattar_fig_1_d.py --simulations 10 --episodes 20
 
 A figure of performances of the agent is saved in results/Mattar/
 
-## Reproduce Mattar's results from fig 3.a (roughly 1 hour run time)
+## Reproduce Mattar's results from fig 3.a (15 mins run time)
 
 ```
-jupyter notebook notebook_fig_3_a.ipynb
+python3 mattar_fig_3_a.py --simulations 20 --episodes 20
 ```
 
-## Reproduce Mattar's results from fig 5.c or 5.e (roughly 1 hour run time)
+A barplot is saved in results/Mattar/
+
+## Reproduce Mattar's results from fig 5.c or 5.e (15 mins run time)
 
 ```
-jupyter notebook notebook_fig_5_c_e.ipynb
+python3 mattar_fig_5_c_e.py --simulations 20 --episodes 20
 ```
+
+A barplot is saved in results/Mattar/
+
+
+Notebooks version to study the results of figs 3 and 5 are also available.

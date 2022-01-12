@@ -152,8 +152,8 @@ class DynaQAgent():
                 starting = False
 
             tot_reward += ep_reward
-            steps_to_exit_eval = self.evaluate(eps, seed)
-            list_steps_episode_eval.append(steps_to_exit_eval)
+            # steps_to_exit_eval = self.evaluate(eps, seed)
+            # list_steps_episode_eval.append(steps_to_exit_eval)
             steps_to_exit_train.append(steps)
         if render:
             # Show the final policy

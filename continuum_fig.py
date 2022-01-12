@@ -30,8 +30,6 @@ args = get_args()
 mdp = create_random_maze(9, 6, 0.2)
 
 # using e-greedy pol for all models
-args.simulations = 10
-args.epsiodes = 20
 args.action_policy = "greedy"
 args.epsilon = 0.
 args.start_random = True
@@ -53,6 +51,7 @@ for i in range(args.simulations):
 print("DYNA-Q")
 args.set_all_gain_to_1 = True
 args.set_all_need_to_1 = True
+args.planning_steps = 20
 res_train_dyna = []
 res_list_Q_dyna = []
 for i in range(args.simulations):
@@ -88,7 +87,7 @@ args.set_all_need_to_1 = False
 args.planning_steps = 0
 args.lambda_ = 0.9
 res_train_qlambda = []
-res_list_qlambda = []
+res_list_Q_qlambda = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
     replay = Replay()
@@ -106,7 +105,7 @@ args.set_all_need_to_1 = True
 args.planning_steps = 20
 args.lambda_ = 0.9
 res_train_dynaqlambda = []
-res_list_dynaqlambda = []
+res_list_Q_dynaqlambda = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
     replay = Replay()
@@ -123,7 +122,7 @@ args.set_all_need_to_1 = False
 args.planning_steps = 20
 args.lambda_ = 0.9
 res_train_prio_qlambda = []
-res_list_prio_qlambda = []
+res_list_Q_prio_qlambda = []
 for i in range(args.simulations):
     print("#### SIM NB: {}".format(i))
     replay = Replay()
@@ -142,5 +141,5 @@ to_plot(np.array(res_train_prio_qlambda), label = "Pioritized replay Q-lambda")
 plt.xlabel("episode")
 plt.ylabel("steps until goal")
 plt.legend()
-plt.savefig("/results/continuum_fig.png")
+plt.savefig("results/continuum_fig.png")
 plt.clf()

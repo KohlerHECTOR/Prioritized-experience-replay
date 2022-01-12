@@ -17,8 +17,6 @@ args = get_args()
 mdp = create_random_maze(9, 6, 0.2)
 
 # using e-greedy pol for all models
-args.simulations = 50
-args.epsiodes = 20
 args.action_policy = "greedy"
 args.epsilon = 0.
 args.start_random = True

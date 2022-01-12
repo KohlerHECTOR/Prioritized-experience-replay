@@ -3,13 +3,13 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ..mazemdp.maze import build_maze, create_random_maze
+from mazemdp.maze import build_maze, create_random_maze
 from random import seed
-from ..mazemdp import create_random_maze
-from ..replay_sim import Agent
-from ..utils import evaluate, to_plot, Replay, SimuData
+from mazemdp import create_random_maze
+from replay_sim import Agent
+from utils import evaluate, to_plot, Replay, SimuData
 
-from ..arguments import get_args, get_args_string
+from arguments import get_args, get_args_string
 
 
 args = get_args()
@@ -17,8 +17,6 @@ args = get_args()
 
 
 mdp = create_random_maze(5, 5, 0.2)
-args.simulations = 50
-args.episodes = 50
 args.set_all_need_to_1 = True
 args.start_random = True
 print(get_args_string(args))
@@ -115,10 +113,7 @@ replay_forward = np.nansum(forward_count[:, -1], axis=0) / args.episodes
 preplay_reverse = np.nansum(reverse_count[:,: -1 ],axis=0) / args.episodes # goal state is always last
 replay_reverse = np.nansum(reverse_count[:, -1], axis=0) / args.episodes
 print([np.nanmean(preplay_forward), np.nanmean(replay_forward), np.nanmean(preplay_reverse), np.nanmean(replay_reverse)])
-fig = plt.figure()
-ax = fig.add_axes([0,0,1,1])
-lab = ["Pre-For", 'Repl-For', 'Pre-Back', 'Repl-Back']
 to_plot = [np.nanmean(preplay_forward), np.nanmean(replay_forward), np.nanmean(preplay_reverse), np.nanmean(replay_reverse)]
-ax.bar(lab,to_plot)
-plt.show()
-plt.savefig("/results/Mattar/linear_mattar_fig_3_a_default.png")
+plt.bar(range(len(to_plot)), to_plot, width = 0.6, color = 'black')
+plt.xticks(range(len(to_plot)), ["Pre-For", 'Repl-For', 'Pre-Back', 'Repl-Back'])
+plt.savefig("results/Mattar/mattar_fig_3_a_open_maze.pdf")
