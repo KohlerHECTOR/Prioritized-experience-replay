@@ -1,15 +1,16 @@
 import numpy as np
-from utils import normalize_mat
+from utils import normalize_mat, need_term, proba, gain_term, get_EVM
 from mazemdp.toolbox import softmax, egreedy
 from mazemdp.mdp import Mdp
-from need_term import need_term
-from gain_term import gain_term
-from EVM import get_EVM
 import sys
-from proba import proba
 import numpy.matlib
-class Agent():
 
+
+class Agent():
+    """
+    A general temporal difference learning agent.
+    Based on Marcelo Mattar's model.
+    """
     def __init__(self, mdp, params, data_saver):
         self.saver = data_saver
         self.mdp = mdp
@@ -184,8 +185,8 @@ class Agent():
                 p += 1  # Increment planning counter
             else:
                 break
-        self.saver.replay.state.append(planning_backups[:, 0])
-        self.saver.replay.action.append(planning_backups[:, 1])
+        return planning_backups
+
 
 
     def target(self, gamma, s_next, a, r):
@@ -245,8 +246,10 @@ class Agent():
 
         tot_reward = 0
         ep = 0
+        tot_step = 0
         steps_to_done = 0
         ep_reward = 0
+        planned = False
         previous_was_goal = False
         np.random.seed(seed)
         s, done = self.start(params)
@@ -276,18 +279,32 @@ class Agent():
                 ## Planning ###
                 if params.plan_only_start_end: #Only do replay if either current or last trial was a goal state
                     if previous_was_goal or s_next in self.mdp.terminal_states:
-                        self.do_planning(params, s)
+                        planning_backups = self.do_planning(params, s)
+                        planned = True
                 else:
                     self.do_planning(params, s)
+                    planned = True
 
                 # move
                 s = s_next
+                tot_step += 1
+
+                if planned:
+                    self.saver.replay.state.append(planning_backups[:, 0])
+                    self.saver.replay.action.append(planning_backups[:, 1])
+                else:
+                    self.saver.replay.state.append([])
+                    self.saver.replay.action.append([])
+
                 self.saver.num_episodes.append(ep)
                 steps_to_done +=1
                 previous_was_goal = False
                 if s in self.mdp.terminal_states:
                     previous_was_goal = True
+                planned = False
 
+                if done:
+                    self.saver.num_episodes[-1] = ep + 1
             # END EPISODE #
             #get next start location
             s_next, done = self.start(params) # agent is currently already in s_next in mdp
@@ -312,5 +329,6 @@ class Agent():
             ep_reward = 0
             # move agent to start location
             s = s_next
+
 
         # return {"train" : steps_to_exit_or_timeout , "list_Q" : list_Q}
