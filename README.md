@@ -49,3 +49,21 @@ A barplot is saved in results/Mattar/
 
 
 Notebooks version to study the results of figs 3 and 5 are also available.
+
+
+## Other interesting experiments are available and will output in the results folder
+
+```
+python3 continuum_fig.py
+```
+To compare TD-learing methods on one plot.
+
+```
+python3 counting_exps.py
+```
+To compare the number of experiences (s a r s') accessed per episode per method.
+
+```
+python3 rew_per_exp.py
+```
+Conclusion of this little study, total reward per experiences accessed per method.
