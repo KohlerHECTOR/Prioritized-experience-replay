@@ -111,7 +111,7 @@ class Agent():
             plan_exp.append(seq_updated)
         return plan_exp
 
-    def do_planning(self, params, s):
+    def do_planning(self, params, s, ep, tot_reward):
         planning_backups = np.empty((0, 5))
         backups_gain = []  # List of GAIN for backups executed
         backups_need = []  # List of NEED for backups executed
@@ -125,8 +125,9 @@ class Agent():
             # Expand previous backup with one extra action
             if params.expand_further and planning_backups.shape[0] > 0:
                 plan_exp = self.expand(params, plan_exp, planning_backups)
-
-            gain, sa_gain = gain_term(plan_exp, params, self.Q.copy())
+                self.saver.nb_exps[ep] += 1
+                self.saver.rew_per_exp.append(tot_reward)
+            gain, sa_gain = gain_term(plan_exp, params, self.Q.copy(), self.saver, ep, tot_reward)
 
             need, SR_or_SD = need_term(params ,plan_exp, s, self.T.copy())
 
@@ -147,6 +148,9 @@ class Agent():
                     plan_exp_arr_max = np.expand_dims(plan_exp_arr[max_EVM_idx][-1], axis=0)
 
                 for n in range(plan_exp_arr_max.shape[0]):
+                    self.saver.nb_exps[ep] += len(plan_exp_arr_max[n])
+                    for i in range(len(plan_exp_arr_max[n])):
+                        self.saver.rew_per_exp.append(tot_reward)
                     # Retrieve information from this experience
                     s_plan = int(plan_exp_arr_max[n][0])
                     a_plan = int(plan_exp_arr_max[n][1])
@@ -182,7 +186,6 @@ class Agent():
                     err_msg = 'planning_backups does not have the correct shape. It is {} but should have a ' \
                               'length equal to 1 or 2, e.g. (5,) or (2, 5)'.format(planning_backups.shape)
                     raise ValueError(err_msg)
-                p += 1  # Increment planning counter
             else:
                 break
         return planning_backups
@@ -213,6 +216,7 @@ class Agent():
     def update_exp(self, s, a, r, s_next):
             self.list_exp.append([s, a, r, s_next]) # Add transition to expList
             self.saver.list_exp.append([s, a, r, s_next])
+
             self.exp_last_s_next[s, a] = s_next # next state from last experience of this state/action
             self.exp_last_rew[s, a] = r # rew from last experience of this state/action
 
@@ -228,7 +232,7 @@ class Agent():
 
     def learn(self, params, seed):
         self.mdp.timeout = params.max_episode_steps
-
+        self.saver.nb_exps = np.zeros(params.episodes)
         if params.pre_explore:
             self.pre_explore()
             self.T = normalize_mat(self.T)
@@ -265,11 +269,13 @@ class Agent():
                 if nb < params.reward_change_proba:
                     r *= params.reward_multiplicator
                 ep_reward += r
+                tot_reward += r
 
                 # update transi matrix and experience list
                 self.update_transi(s, s_next, params.T_learning_rate)
                 self.update_exp(s, a, r, s_next)
-
+                self.saver.nb_exps[ep]+=1
+                self.saver.rew_per_exp.append(tot_reward)
                 ### Q-Learning ###
                 delta = self.target(params.gamma, s_next, a, r) - self.Q[s,a] # prediction error
                 self.update_elig_traces(s, a)
@@ -279,16 +285,15 @@ class Agent():
                 ## Planning ###
                 if params.plan_only_start_end: #Only do replay if either current or last trial was a goal state
                     if previous_was_goal or s_next in self.mdp.terminal_states:
-                        planning_backups = self.do_planning(params, s)
+                        planning_backups = self.do_planning(params, s, ep, tot_reward)
                         planned = True
                 else:
-                    self.do_planning(params, s)
+                    planning_backups = self.do_planning(params, s, ep, tot_reward)
                     planned = True
 
                 # move
                 s = s_next
                 tot_step += 1
-
                 if planned:
                     self.saver.replay.state.append(planning_backups[:, 0])
                     self.saver.replay.action.append(planning_backups[:, 1])
@@ -314,12 +319,12 @@ class Agent():
                     self.update_transi(s, s_next, params.T_learning_rate)
                     # self.update_exp(s, a, r, s_next)
                     self.list_exp.append([s, np.NaN, np.NaN, s_next])
+                    self.saver.nb_exps[ep]+= 1
+                    self.saver.rew_per_exp.append(tot_reward)
 
             self.eTr = np.zeros((self.mdp.nb_states, self.mdp.action_space.size))
-            tot_reward += ep_reward
             self.saver.steps_to_exit.append(steps_to_done)
             self.saver.list_Q.append(self.Q)
-
 
             print("#### EPISODE {} ####".format(ep + 1))
             print("TRAIN: {}".format(steps_to_done))
