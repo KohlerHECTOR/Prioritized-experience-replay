@@ -44,7 +44,7 @@ def get_EVM(params, plan_exp, gain, need):
             raise ValueError(err_msg)
     return EVM
 
-def gain_term(plan_exp, params, Q):
+def gain_term(plan_exp, params, Q, saver = None, ep = None, tot_reward = None):
 
     gain = []
     sa_gain = np.empty(Q.shape)
@@ -71,6 +71,8 @@ def gain_term(plan_exp, params, Q):
             Q_target = rew + np.power(params.gamma, steps_to_end + 1) * stp1_value
             Q_mean[act_taken] += params.alpha * (Q_target - Q_mean[act_taken])
 
+            saver.nb_exps[ep] +=1
+            saver.rew_per_exp.append(tot_reward)
             # policy AFTER backup
             pA_post = proba(Q_mean, params.plan_policy, params)
 
@@ -107,6 +109,7 @@ def need_term(params, plan_exp, s, T):
         need.append(np.repeat(np.nan, this_exp.shape[0]))
         for j in range(this_exp.shape[0]):
             need[i][j] = SR_or_SD[int(this_exp[j, 0])]
+
     return need, SR_or_SD
 #################################################################################
 def normalize_mat(matrix):
@@ -159,6 +162,8 @@ class SimuData():
         self.list_exp = []
         self.steps_to_exit = []
         self.list_Q = []
+        self.nb_exps = []
+        self.rew_per_exp = []
 
 class Replay():
     def __init__(self):
