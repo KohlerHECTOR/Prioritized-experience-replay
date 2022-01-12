@@ -41,6 +41,7 @@ def get_args():
     parser.add_argument("--episodes", type = int, default = 50)
     parser.add_argument("--max_episode_steps", type = int, default = 1e5)
 
-
+    parser.add_argument("--reward_change_proba", type = float, default = 0)
+    parser.add_argument("--reward_multiplicator", type = float, default = 1)
     args = parser.parse_args()
     return args

@@ -258,6 +258,9 @@ class Agent():
                 a = np.random.choice(self.mdp.action_space.size, p = proba_a)
                 # perform action
                 s_next, r, done, _ = self.mdp.step(a)
+                nb = np.random.random()
+                if nb < params.reward_change_proba:
+                    r *= params.reward_multiplicator
                 ep_reward += r
 
                 # update transi matrix and experience list

@@ -102,6 +102,7 @@ class Mdp:  # defines a Markov Decision Process
         self.current_state = state
         done = self.done()  # checks if the episode is over
         # had to cahnge this
+
         if state in self.terminal_states:
             reward = 1
             done = True
