@@ -14,7 +14,7 @@ from dynaq import DynaQAgent
 os.environ["VIDEO_FPS"] = "5"
 
 
-mdp = create_random_maze(9, 6, 0.2)
+mdp = create_random_maze(9, 6, 0.13)
 
 # Sutton and Barto parameters (figure 8.5 from Intro to RL) with eps_greedy pol
 # alpha = 0.1, eps = 0.1, gamma = 0.95
@@ -22,7 +22,7 @@ mdp = create_random_maze(9, 6, 0.2)
 ALPHA = 0.1
 EPS = 0.1
 GAMMA = 0.95
-NB_EXP =  300
+NB_EXP =  30
 
 print("-------- Rat does 0 steps of planning ----------")
 to_plot_planning_0 = []
@@ -30,7 +30,7 @@ to_plot_planning_0 = []
 rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
-    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 30, render = False, n = 0, timeout = 20000, seed = i )
+    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 0, timeout = 20000, seed = i )
     to_plot_planning_0.append(data_eval)
     print("Experience number: {}".format(i + 1))
 
@@ -42,7 +42,7 @@ to_plot_planning_5 = []
 rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
-    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 30, render = False, n = 5, timeout = 20000, seed = i)
+    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 5, timeout = 20000, seed = i)
     to_plot_planning_5.append(data_eval)
     print("Experience number: {}".format(i + 1))
 
@@ -54,7 +54,7 @@ to_plot_planning_50 = []
 rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
-    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 30, render = False, n = 50, timeout = 20000, seed = i)
+    data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 50, timeout = 20000, seed = i)
     to_plot_planning_50.append(data_eval)
     print("Experience number: {}".format(i + 1))
 
@@ -67,4 +67,4 @@ plt.xlabel("episode")
 plt.ylabel("steps to goal")
 plt.title("Evaluation of Sutton & Barto's Dyna-Q agent")
 plt.legend()
-plt.savefig("/results/Sutton&Barto/figure_8_5.pdf")
+plt.savefig("results/Sutton&Barto/figure_8_5.pdf")
