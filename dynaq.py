@@ -105,7 +105,7 @@ class DynaQAgent():
         tot_reward = 0
         for _ in range(nb_episodes):
             ep_reward = 0
-            np.random.seed(seed)
+
             s = self.mdp.reset(uniform = True)
             while s in self.mdp.terminal_states:
                 s = self.mdp.reset(uniform = True)
@@ -115,6 +115,7 @@ class DynaQAgent():
             done = self.mdp.done()
             steps = 0
             starting = True
+            # np.random.seed(seed)
             while not done:
 
                 # Update visited states
@@ -152,8 +153,8 @@ class DynaQAgent():
                 starting = False
 
             tot_reward += ep_reward
-            # steps_to_exit_eval = self.evaluate(eps, seed)
-            # list_steps_episode_eval.append(steps_to_exit_eval)
+            steps_to_exit_eval = self.evaluate(eps, seed)
+            list_steps_episode_eval.append(steps_to_exit_eval)
             steps_to_exit_train.append(steps)
         if render:
             # Show the final policy
