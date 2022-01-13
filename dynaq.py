@@ -32,7 +32,7 @@ class DynaQAgent():
         s = self.mdp.current_state
         done = self.mdp.done()
 
-        np.random.seed(seed)
+        # np.random.seed(seed)
         steps_to_exit = 0
         while not done:
 
@@ -115,7 +115,7 @@ class DynaQAgent():
             done = self.mdp.done()
             steps = 0
             starting = True
-            # np.random.seed(seed)
+            np.random.seed(seed)
             while not done:
 
                 # Update visited states

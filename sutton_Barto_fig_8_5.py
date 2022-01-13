@@ -31,7 +31,7 @@ rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
     data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 0, timeout = 20000, seed = i )
-    to_plot_planning_0.append(data_eval)
+    to_plot_planning_0.append(data_train)
     print("Experience number: {}".format(i + 1))
 
 to_plot_planning_0 = np.array(to_plot_planning_0).mean(axis = 0)
@@ -43,7 +43,7 @@ rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
     data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 5, timeout = 20000, seed = i)
-    to_plot_planning_5.append(data_eval)
+    to_plot_planning_5.append(data_train)
     print("Experience number: {}".format(i + 1))
 
 to_plot_planning_5 = np.array(to_plot_planning_5).mean(axis = 0)
@@ -55,7 +55,7 @@ rat = DynaQAgent(mdp, alpha = ALPHA, gamma = GAMMA)
 
 for i in range(NB_EXP):
     data_train, data_eval = rat.learn(eps = EPS, nb_episodes = 50, render = False, n = 50, timeout = 20000, seed = i)
-    to_plot_planning_50.append(data_eval)
+    to_plot_planning_50.append(data_train)
     print("Experience number: {}".format(i + 1))
 
 to_plot_planning_50 = np.array(to_plot_planning_50).mean(axis = 0)
